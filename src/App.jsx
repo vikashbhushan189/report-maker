@@ -1,0 +1,363 @@
+import React, { useState, useEffect, useMemo } from 'react';
+import Header from './components/Header';
+import FastReportGenerator from './components/FastReportGenerator';
+import RawDataViewer from './components/RawDataViewer';
+import ReportConfig from './components/ReportConfig';
+import ReportViewer from './components/ReportViewer';
+import SplitView from './components/SplitView';
+import { SAMPLE_DATASETS } from './utils/sampleData';
+import { parseExcelFile, parseRawText, extractSheetData, analyzeColumns } from './utils/excelReader';
+import { REPORT_TOPICS, REPORT_THEMES } from './utils/reportTemplates';
+import { generateReportData } from './utils/formulaEngine';
+import { exportToStyledExcel, exportToCSV } from './utils/excelExporter';
+import { CheckCircle2, AlertCircle } from 'lucide-react';
+
+export default function App() {
+  const [activeTab, setActiveTab] = useState('report'); // Default to Report view
+  const [selectedTopicId, setSelectedTopicId] = useState('ekyc_progress');
+  const [fileInfo, setFileInfo] = useState(null);
+  const [reportMeta, setReportMeta] = useState({
+    presetId: 'ekyc_progress',
+    title: 'S01 - Member KYC Details',
+    subtitle: 'S01 - Member KYC Details Panchayat: All Panchayats',
+    companyName: 'Block: KOTWA',
+    dateLabel: 'Date:-12-10-2026',
+    theme: 'ekyc_olive',
+    layoutType: 'ekyc_grid',
+    sortByCol: 'e-KYC Gap',
+    sortDir: 'desc',
+    groupBy: ''
+  });
+  const [columns, setColumns] = useState([]);
+  const [isExporting, setIsExporting] = useState(false);
+  const [toast, setToast] = useState(null);
+
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => {
+      setToast(null);
+    }, 4000);
+  };
+
+  // Switch report topic
+  const handleSelectTopic = (topicId) => {
+    const topic = REPORT_TOPICS.find(t => t.id === topicId) || REPORT_TOPICS[0];
+    setSelectedTopicId(topic.id);
+
+    setReportMeta(prev => ({
+      ...prev,
+      presetId: topic.id,
+      title: topic.title,
+      subtitle: topic.subtitle,
+      companyName: prev.companyName || topic.companyName || 'Block: KOTWA',
+      dateLabel: prev.dateLabel || topic.dateLabel || 'Date:-12-10-2026',
+      theme: topic.theme || 'ekyc_olive',
+      layoutType: topic.layoutType || 'ekyc_grid',
+      sortByCol: topic.sortByCol || '',
+      sortDir: topic.sortDir || 'desc'
+    }));
+
+    setColumns(topic.columns || []);
+    showToast(`Applied Topic: "${topic.topicName}"`);
+  };
+
+  // Load initial dataset (Kotwa S01 dataset)
+  const loadDataset = (key = 'ekyc') => {
+    const sample = SAMPLE_DATASETS[key] || SAMPLE_DATASETS.ekyc;
+    const rawHeaders = Object.keys(sample.data[0] || {});
+    const stats = analyzeColumns(rawHeaders, sample.data);
+
+    const defaultTopic = REPORT_TOPICS.find(t => t.id === sample.defaultPreset) || REPORT_TOPICS[0];
+
+    setFileInfo({
+      filename: sample.filename,
+      data: sample.data,
+      headers: rawHeaders,
+      columnStats: stats,
+      sheetNames: ['Sheet1'],
+      activeSheet: 'Sheet1',
+      rawWorkbook: null
+    });
+
+    handleSelectTopic(defaultTopic.id);
+  };
+
+  // Load on mount
+  useEffect(() => {
+    loadDataset('ekyc');
+  }, []);
+
+  // Handle local file upload
+  const handleFileUpload = async (file) => {
+    try {
+      const parsed = await parseExcelFile(file);
+      applyParsedData(parsed, file.name);
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  };
+
+  // Handle pasted text
+  const handlePasteData = (rawText) => {
+    try {
+      const parsed = parseRawText(rawText);
+      applyParsedData(parsed, 'Pasted_Data.xlsx');
+      showToast(`Pasted data loaded successfully (${parsed.data.length} records)!`);
+    } catch (err) {
+      showToast(`Paste failed: ${err.message}`, 'error');
+    }
+  };
+
+  const applyParsedData = (parsed, displayName) => {
+    setFileInfo(parsed);
+
+    // Update block name if detected in metadata
+    if (parsed.metadata?.block) {
+      setReportMeta(prev => ({
+        ...prev,
+        companyName: `Block: ${parsed.metadata.block}`
+      }));
+    }
+
+    // Keep current selected topic or auto-select ekyc_progress
+    const currentTopic = REPORT_TOPICS.find(t => t.id === selectedTopicId) || REPORT_TOPICS[0];
+    setColumns(currentTopic.columns || []);
+    setActiveTab('report');
+    showToast(`Loaded ${parsed.data.length} records from "${displayName}".`);
+  };
+
+  // Manual overrides for columns like "With e-KYC Adhaar 10-10-2026"
+  const INITIAL_PREV_EKYC = {
+    'MACHHARGAWA': 1516,
+    'KARARIYA': 1534,
+    'MAHARANI BHOPTA': 1252,
+    'JASAULI': 1402,
+    'KOTWA': 884,
+    'AHIRAULIYA': 1301,
+    'BHAHARWA KALA EAST': 1298,
+    'BHOPATPUR NORTH': 904,
+    'BHOPATPUR SOUTH': 1001,
+    'JAGIRAHA': 679,
+    'BATHANA': 1254,
+    'GOPI CHHAPRA': 1686,
+    'POKHARA': 1324,
+    'DUMRA': 721,
+    'JASAULI PATTI': 832,
+    'BHAHARWA KALA WEST': 1027
+  };
+
+  const [manualValues, setManualValues] = useState(() => {
+    try {
+      const saved = localStorage.getItem('manual_ekyc_prev_data');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return INITIAL_PREV_EKYC;
+  });
+
+  const handleSaveManualValues = (newValues) => {
+    setManualValues(newValues);
+    try {
+      localStorage.setItem('manual_ekyc_prev_data', JSON.stringify(newValues));
+    } catch (e) {}
+    showToast('Updated previous day e-KYC values & recalculated progress!');
+  };
+
+  const handleUpdateSingleManualValue = (gpName, val) => {
+    setManualValues(prev => {
+      const updated = { ...prev, [gpName]: val === '' ? '' : Number(val) };
+      try {
+        localStorage.setItem('manual_ekyc_prev_data', JSON.stringify(updated));
+      } catch (e) {}
+      return updated;
+    });
+  };
+
+  // Reactive calculation of report rows & totals
+  const { reportRows, totals } = useMemo(() => {
+    if (!fileInfo || !fileInfo.data) return { reportRows: [], totals: {} };
+    const { rows, totals: calculatedTotals } = generateReportData(
+      fileInfo.data,
+      columns,
+      reportMeta.groupBy,
+      reportMeta.sortByCol,
+      reportMeta.sortDir,
+      manualValues
+    );
+    return { reportRows: rows, totals: calculatedTotals };
+  }, [fileInfo, columns, reportMeta.groupBy, reportMeta.sortByCol, reportMeta.sortDir, manualValues]);
+
+  // Handle Excel Export (.xlsx)
+  const handleExportExcel = async () => {
+    if (!reportRows || reportRows.length === 0) {
+      showToast('No report data to export.', 'error');
+      return;
+    }
+
+    try {
+      setIsExporting(true);
+      const cleanTitle = (reportMeta.title || 'eKYC_Report').replace(/[^a-zA-Z0-9_-]/g, '_');
+      await exportToStyledExcel({
+        reportMeta,
+        columns,
+        rows: reportRows,
+        totals,
+        filename: `${cleanTitle}_${new Date().toISOString().slice(0, 10)}.xlsx`
+      });
+      showToast('Styled Excel (.xlsx) downloaded successfully!');
+    } catch (err) {
+      showToast(`Export failed: ${err.message}`, 'error');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  // Handle CSV Export
+  const handleExportCSV = () => {
+    if (!reportRows || reportRows.length === 0) return;
+    try {
+      const cleanTitle = (reportMeta.title || 'eKYC_Report').replace(/[^a-zA-Z0-9_-]/g, '_');
+      exportToCSV({
+        columns,
+        rows: reportRows,
+        filename: `${cleanTitle}_${new Date().toISOString().slice(0, 10)}.csv`
+      });
+      showToast('CSV report exported successfully!');
+    } catch (err) {
+      showToast(`CSV export failed: ${err.message}`, 'error');
+    }
+  };
+
+  const hasData = Boolean(fileInfo && fileInfo.data && fileInfo.data.length > 0);
+
+  return (
+    <div className="min-h-screen bg-slate-100 flex flex-col font-sans text-slate-800">
+      {/* Toast Notification */}
+      {toast && (
+        <div className="fixed bottom-5 right-5 z-50 flex items-center gap-2 px-4 py-2.5 rounded-xl shadow-xl text-xs font-semibold animate-in slide-in-from-bottom duration-200 border bg-white text-slate-800 border-slate-200">
+          {toast.type === 'error' ? (
+            <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
+          ) : (
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+          )}
+          <span>{toast.message}</span>
+        </div>
+      )}
+
+      {/* Header */}
+      <Header
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        hasData={hasData}
+        onLoadSample={loadDataset}
+        onExportExcel={handleExportExcel}
+        isExporting={isExporting}
+      />
+
+      {/* Main Content */}
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-5 space-y-5">
+        {/* Fast Report Generator Bar (Designed for New Staff) */}
+        <FastReportGenerator
+          selectedTopicId={selectedTopicId}
+          onSelectTopic={handleSelectTopic}
+          onFileUpload={handleFileUpload}
+          onPasteData={handlePasteData}
+          onExportExcel={handleExportExcel}
+          isExporting={isExporting}
+          reportMeta={reportMeta}
+          setReportMeta={setReportMeta}
+          rowCount={fileInfo?.data?.length || 0}
+          fileName={fileInfo?.filename}
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+        />
+
+        {/* Display Views */}
+        {hasData && (
+          <div>
+            {activeTab === 'report' && (
+              <ReportViewer
+                reportMeta={reportMeta}
+                columns={columns}
+                rows={reportRows}
+                totals={totals}
+                onExportExcel={handleExportExcel}
+                onExportCSV={handleExportCSV}
+                isExporting={isExporting}
+                manualValues={manualValues}
+                onSaveManualValues={handleSaveManualValues}
+                onUpdateSingleManualValue={handleUpdateSingleManualValue}
+              />
+            )}
+
+            {activeTab === 'raw' && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-sm font-bold text-slate-800">
+                    Raw Data Source Preview
+                  </h2>
+                  <span className="text-xs text-slate-500">
+                    {fileInfo.data.length} Panchayats (Rows 5 to 20) • {fileInfo.headers.length} columns
+                  </span>
+                </div>
+                <RawDataViewer
+                  headers={fileInfo.headers}
+                  data={fileInfo.data}
+                  columnStats={fileInfo.columnStats}
+                  portalTotals={fileInfo.portalTotals}
+                  totalRowIndex={fileInfo.totalRowIndex || 4}
+                  dataStartRow={fileInfo.dataStartRowIndex || 5}
+                />
+              </div>
+            )}
+
+            {activeTab === 'split' && (
+              <SplitView
+                headers={fileInfo.headers}
+                rawData={fileInfo.data}
+                columnStats={fileInfo.columnStats}
+                portalTotals={fileInfo.portalTotals}
+                totalRowIndex={fileInfo.totalRowIndex || 4}
+                dataStartRowIndex={fileInfo.dataStartRowIndex || 5}
+                reportMeta={reportMeta}
+                columns={columns}
+                reportRows={reportRows}
+                totals={totals}
+                onExportExcel={handleExportExcel}
+                onExportCSV={handleExportCSV}
+                isExporting={isExporting}
+                manualValues={manualValues}
+                onSaveManualValues={handleSaveManualValues}
+                onUpdateSingleManualValue={handleUpdateSingleManualValue}
+              />
+            )}
+
+            {activeTab === 'builder' && (
+              <ReportConfig
+                rawHeaders={fileInfo.headers}
+                sampleRow={fileInfo.data[0] || {}}
+                reportMeta={reportMeta}
+                setReportMeta={setReportMeta}
+                columns={columns}
+                setColumns={setColumns}
+              />
+            )}
+          </div>
+        )}
+      </main>
+
+      {/* Footer */}
+      <footer className="bg-white border-t border-slate-200 py-3 mt-auto">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-1.5">
+          <div className="flex items-center gap-1.5">
+            <span className="font-semibold text-slate-700">Excel Report Studio</span>
+            <span>—</span>
+            <span>Instant S01 Member KYC & e-KYC Report Generator</span>
+          </div>
+          <div className="text-slate-400">
+            Local browser processing • 100% Confidential
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+}
