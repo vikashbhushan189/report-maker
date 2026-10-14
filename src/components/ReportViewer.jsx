@@ -16,7 +16,7 @@ import {
   Edit3,
   ArrowUpDown
 } from 'lucide-react';
-import { formatValue, getT01PctColor, getVoPctColor } from '../utils/formulaEngine';
+import { formatValue, getT01PctColor, getVoPctColor, getVoYesNoColor } from '../utils/formulaEngine';
 import { REPORT_THEMES } from '../utils/reportTemplates';
 import ManualDataModal from './ManualDataModal';
 
@@ -38,9 +38,10 @@ export default function ReportViewer({
   const [showManualModal, setShowManualModal] = useState(false);
 
   const theme = REPORT_THEMES[reportMeta.theme] || REPORT_THEMES.ekyc_olive;
-  const isVo = reportMeta.presetId === 't01_vo_transactions' || reportMeta.layoutType === 't01_vo_grid';
-  const isT01 = !isVo && (reportMeta.presetId === 't01_transactions' || reportMeta.layoutType === 't01_grid');
-  const isEkyc = !isVo && !isT01 && (reportMeta.presetId === 'ekyc_progress' || reportMeta.layoutType === 'ekyc_grid');
+  const isVoIndividual = reportMeta.presetId === 't01_vo_individual' || reportMeta.layoutType === 't01_vo_individual_grid';
+  const isVo = !isVoIndividual && (reportMeta.presetId === 't01_vo_transactions' || reportMeta.layoutType === 't01_vo_grid');
+  const isT01 = !isVoIndividual && !isVo && (reportMeta.presetId === 't01_transactions' || reportMeta.layoutType === 't01_grid');
+  const isEkyc = !isVoIndividual && !isVo && !isT01 && (reportMeta.presetId === 'ekyc_progress' || reportMeta.layoutType === 'ekyc_grid');
 
   const [sortCol, setSortCol] = useState(reportMeta.sortByCol || '');
   const [sortDir, setSortDir] = useState(reportMeta.sortDir || 'asc');
@@ -217,7 +218,7 @@ export default function ReportViewer({
 
       {/* 2. Official Report Container (Exact image replica) */}
       <div className="bg-white border-2 border-slate-300 shadow-lg rounded-xl overflow-hidden">
-        {isVo ? (
+        {isVo || isVoIndividual ? (
           <div>
             {/* VO Top Title: Red Centered on Gray/Beige Background */}
             <div className="py-2.5 px-4 text-center border-b border-slate-300 bg-slate-200">
@@ -235,7 +236,7 @@ export default function ReportViewer({
                 <span>Block: {reportMeta.companyName?.replace(/^Block:\s*/i, '').trim() || 'KOTWA'}</span>
               </div>
               <div className="py-2 px-3 text-center flex items-center justify-center">
-                <span>Date:-{reportMeta.currentDate || '13-10-2026'}</span>
+                <span>Date:-{reportMeta.currentDate || (isVoIndividual ? '12-10-2026' : '13-10-2026')}</span>
               </div>
             </div>
           </div>
@@ -400,7 +401,12 @@ export default function ReportViewer({
                         // Check special cell styles as in the image
                         let cellClass = 'border border-slate-300 py-1.5 px-2 whitespace-nowrap ';
 
-                        if (col.cellStyle === 'vo_pct' || (isVo && col.header.includes('Percentage'))) {
+                        if (col.cellStyle === 'vo_yes_no' || (isVoIndividual && col.header.includes('Transactions Captured'))) {
+                          const colorMeta = getVoYesNoColor(rawVal);
+                          cellClass += `${colorMeta.bg} ${colorMeta.text} text-center font-bold `;
+                        } else if (isVoIndividual && ['eBK Mobile Number', 'Transaction Start Date', 'Financial Intermediary'].includes(col.header)) {
+                          cellClass += 'text-center font-medium text-slate-800 ';
+                        } else if (col.cellStyle === 'vo_pct' || (isVo && col.header.includes('Percentage'))) {
                           const colorMeta = getVoPctColor(rawVal);
                           cellClass += `${colorMeta.bg} ${colorMeta.text} text-right `;
                         } else if (col.cellStyle === 't01_pct' || col.header.includes('Percentage (%)')) {
@@ -439,8 +445,8 @@ export default function ReportViewer({
               )}
             </tbody>
 
-            {/* Total Row: Bold Red Text as in Image */}
-            {totals && rows.length > 0 && (
+            {/* Total Row: Bold Red Text as in Image (Omitted for Individual VO reports) */}
+            {!isVoIndividual && totals && rows.length > 0 && (
               <tfoot className="sticky bottom-0 z-10">
                 <tr className={`font-bold border-t-2 border-slate-400 border-b-2 border-slate-400 ${
                   isVo || isT01 ? 'bg-rose-100/80 text-slate-900' : 'bg-white text-[#c00000]'
@@ -478,7 +484,7 @@ export default function ReportViewer({
 
         {/* Footer: User ID & Download info as in Image */}
         <div className="px-4 py-2 text-[10px] text-slate-500 italic bg-white border-t border-slate-200">
-          {reportMeta.downloadInfo || `User ID: IBR_KOTWA & Downloaded on: ${new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })} at 11:12:08 am`}
+          {reportMeta.downloadInfo || (isVoIndividual ? 'User ID: IBR_KOTWA & Downloaded on: 12 October 2026 at 11:44:59 am' : `User ID: IBR_KOTWA & Downloaded on: ${new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })} at 11:12:08 am`)}
         </div>
 
         {/* Table Pagination */}
@@ -493,9 +499,11 @@ export default function ReportViewer({
               }}
               className="bg-white border border-slate-300 rounded px-1.5 py-0.5 text-xs text-slate-700 focus:outline-hidden"
             >
-              <option value={16}>16 (All Panchayats)</option>
+              <option value={16}>16 (Panchayats)</option>
               <option value={25}>25</option>
               <option value={50}>50</option>
+              <option value={60}>60 (All VOs)</option>
+              <option value={100}>100</option>
             </select>
             <span>• Total {rows.length} records</span>
           </div>

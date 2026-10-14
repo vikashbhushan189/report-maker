@@ -395,6 +395,37 @@ export function getVoPctColor(val) {
 }
 
 /**
+ * Returns the exact color palette for VO Yes/No Captured cells:
+ * YES -> Bright Green (#00b050 / text-black font-bold)
+ * NO -> Bright Red (#ff0000 / text-black font-bold)
+ */
+export function getVoYesNoColor(val) {
+  const str = String(val || '').trim().toUpperCase();
+  if (str === 'YES') {
+    return {
+      bg: 'bg-[#00b050]',
+      text: 'text-black font-bold',
+      excelArgb: 'FF00B050',
+      excelFontColor: 'FF000000'
+    };
+  }
+  if (str === 'NO') {
+    return {
+      bg: 'bg-[#ff0000]',
+      text: 'text-black font-bold',
+      excelArgb: 'FFFF0000',
+      excelFontColor: 'FF000000'
+    };
+  }
+  return {
+    bg: '',
+    text: 'text-slate-700',
+    excelArgb: null,
+    excelFontColor: 'FF000000'
+  };
+}
+
+/**
  * Returns the exact color palette for T01 Transaction Percentage cells
  * Red for 0%, Yellow for <2%, Soft Green for 2%-5%, Rich Green for >=5%
  */

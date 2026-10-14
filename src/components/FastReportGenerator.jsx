@@ -129,7 +129,7 @@ export default function FastReportGenerator({
               Raw Data File:
             </span>
             <span className="text-[10px] font-semibold text-emerald-700">
-              {rowCount ? `${rowCount} ${selectedTopicId === 't01_vo_transactions' ? 'CLFs' : 'Panchayats'}` : 'Ready'}
+              {rowCount ? `${rowCount} ${selectedTopicId === 't01_vo_individual' ? 'VOs' : selectedTopicId === 't01_vo_transactions' ? 'CLFs' : 'Panchayats'}` : 'Ready'}
             </span>
           </label>
 
@@ -162,7 +162,7 @@ export default function FastReportGenerator({
           </div>
 
           <div className="text-[10px] text-slate-500 mt-1 truncate">
-            Current: <span className="font-semibold text-slate-700">{fileName || (selectedTopicId === 't01_vo_transactions' ? 'T01_VO_Transactions_Kotwa.xlsx' : selectedTopicId === 't01_transactions' ? 'T01_SHG_Transactions_Kotwa.xlsx' : 'S01_Member_KYC_Details_Kotwa.xlsx')}</span>
+            Current: <span className="font-semibold text-slate-700">{fileName || (selectedTopicId === 't01_vo_individual' ? 'T01_VO_Transactions_Individual_Kotwa.xlsx' : selectedTopicId === 't01_vo_transactions' ? 'T01_VO_Transactions_Kotwa.xlsx' : selectedTopicId === 't01_transactions' ? 'T01_SHG_Transactions_Kotwa.xlsx' : 'S01_Member_KYC_Details_Kotwa.xlsx')}</span>
           </div>
         </div>
 
@@ -171,11 +171,11 @@ export default function FastReportGenerator({
           <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1 flex items-center justify-between">
             <span className="flex items-center gap-1.5 text-emerald-800">
               <span className="w-4 h-4 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px] font-bold">3</span>
-              {selectedTopicId === 't01_transactions' ? 'Header & Date:' : 'Report Dates & Block:'}
+              {selectedTopicId === 't01_transactions' || selectedTopicId === 't01_vo_transactions' || selectedTopicId === 't01_vo_individual' ? 'Header & Date:' : 'Report Dates & Block:'}
             </span>
           </label>
 
-          {selectedTopicId === 't01_vo_transactions' ? (
+          {selectedTopicId === 't01_vo_transactions' || selectedTopicId === 't01_vo_individual' ? (
             <div className="grid grid-cols-3 gap-1.5">
               <div>
                 <span className="text-[9px] text-slate-400 block truncate">District</span>

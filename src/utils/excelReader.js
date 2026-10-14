@@ -1,5 +1,5 @@
 import * as XLSX from 'xlsx';
-import { detectT01Months, detectVoMonths } from './reportTemplates.js';
+import { detectT01Months, detectVoMonths, detectVoIndividualMonths } from './reportTemplates.js';
 
 /**
  * Reads an Excel or CSV File object and returns parsed workbook information
@@ -117,7 +117,10 @@ export function extractSheetData(workbook, sheetName) {
 
   for (let i = 0; i < Math.min(rawJson.length, 5); i++) {
     const rowStr = rawJson[i].map(c => String(c || '').trim()).join(' ');
-    if (rowStr.toLowerCase().includes('vo transactions monitoring') || rowStr.toLowerCase().includes('clf name')) {
+    if (rowStr.toLowerCase().includes('ebk name') || rowStr.toLowerCase().includes('vo name') || rowStr.toLowerCase().includes('financial intermediary')) {
+      metadata.title = 'T01 - VO Transactions Monitoring Status';
+      metadata.reportType = 't01_vo_individual';
+    } else if (rowStr.toLowerCase().includes('vo transactions monitoring') || rowStr.toLowerCase().includes('clf name') || rowStr.toLowerCase().includes('total vos')) {
       metadata.title = 'T01 - VO Transactions Monitoring Status';
       metadata.reportType = 't01_vo';
     } else if (rowStr.toLowerCase().includes('transactions monitoring') || rowStr.toLowerCase().includes('t01')) {
@@ -162,6 +165,8 @@ export function extractSheetData(workbook, sheetName) {
         rowStrings.includes('gram panchayat') ||
         rowStrings.includes('panchayat') ||
         rowStrings.includes('clf name') ||
+        rowStrings.includes('vo name') ||
+        rowStrings.includes('ebk name') ||
         (rowStrings.includes('state') && rowStrings.includes('district') && rowStrings.includes('block'))
       ) {
         headerRowIndex = r;
@@ -261,6 +266,9 @@ export function extractSheetData(workbook, sheetName) {
   let detectedMonths = detectT01Months(cleanHeaders);
   if (!detectedMonths || detectedMonths.length === 0) {
     detectedMonths = detectVoMonths(cleanHeaders);
+  }
+  if (!detectedMonths || detectedMonths.length === 0) {
+    detectedMonths = detectVoIndividualMonths(cleanHeaders);
   }
 
   return {

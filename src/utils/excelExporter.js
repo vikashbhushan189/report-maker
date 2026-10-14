@@ -29,9 +29,10 @@ export async function exportToStyledExcel({
   filename = 'Report.xlsx'
 }) {
   const theme = REPORT_THEMES[reportMeta.theme] || REPORT_THEMES.ekyc_olive;
-  const isVo = reportMeta.presetId === 't01_vo_transactions' || reportMeta.layoutType === 't01_vo_grid';
-  const isT01 = !isVo && (reportMeta.presetId === 't01_transactions' || reportMeta.layoutType === 't01_grid');
-  const isEkyc = !isVo && !isT01 && (reportMeta.presetId === 'ekyc_progress' || reportMeta.layoutType === 'ekyc_grid');
+  const isVoIndividual = reportMeta.presetId === 't01_vo_individual' || reportMeta.layoutType === 't01_vo_individual_grid';
+  const isVo = !isVoIndividual && (reportMeta.presetId === 't01_vo_transactions' || reportMeta.layoutType === 't01_vo_grid');
+  const isT01 = !isVoIndividual && !isVo && (reportMeta.presetId === 't01_transactions' || reportMeta.layoutType === 't01_grid');
+  const isEkyc = !isVoIndividual && !isVo && !isT01 && (reportMeta.presetId === 'ekyc_progress' || reportMeta.layoutType === 'ekyc_grid');
 
   const workbook = new ExcelJS.Workbook();
   workbook.creator = 'Report Studio';
@@ -39,7 +40,7 @@ export async function exportToStyledExcel({
   workbook.created = new Date();
   workbook.modified = new Date();
 
-  const sheetName = isVo ? 'VO Transactions Report' : (isT01 ? 'SHG Transactions Report' : (isEkyc ? 'KYC Progress Report' : 'Report'));
+  const sheetName = isVoIndividual ? 'VO Monitoring Status' : (isVo ? 'VO Transactions Report' : (isT01 ? 'SHG Transactions Report' : (isEkyc ? 'KYC Progress Report' : 'Report')));
   const sheet = workbook.addWorksheet(sheetName, {
     views: [{ showGridLines: true }],
     pageSetup: { orientation: 'landscape', fitToPage: true, fitToWidth: 1 }
@@ -65,7 +66,7 @@ export async function exportToStyledExcel({
     colLetterMap[col.header] = getColLetter(idx + 2);
   });
 
-  if (isVo) {
+  if (isVo || isVoIndividual) {
     // ----------------------------------------------------
     // 1. VO HEADER: Title Banner (Row 1)
     // ----------------------------------------------------
@@ -95,7 +96,7 @@ export async function exportToStyledExcel({
 
     const districtText = `District: ${reportMeta.district || 'PURBI CHAMPARAN'}`;
     const blockText = `Block: ${reportMeta.companyName?.replace(/^Block:\s*/i, '').trim() || 'KOTWA'}`;
-    const dateText = `Date:-${reportMeta.currentDate || '13-10-2026'}`;
+    const dateText = `Date:-${reportMeta.currentDate || (isVoIndividual ? '12-10-2026' : '13-10-2026')}`;
 
     const b1End = Math.max(2, Math.floor(totalColsCount * 0.33));
     const b2End = Math.max(b1End + 1, Math.floor(totalColsCount * 0.67));
@@ -310,6 +311,45 @@ export async function exportToStyledExcel({
 
       const rawVal = row[col.header];
       const numVal = typeof rawVal === 'number' ? rawVal : Number(String(rawVal || '').replace(/[$,%]/g, '').trim());
+
+      // --------------------------------------------------
+      // CELL STYLING FOR VO INDIVIDUAL (YES / NO Captured)
+      // --------------------------------------------------
+      if (isVoIndividual) {
+        if (col.cellStyle === 'vo_yes_no' || col.header.includes('Transactions Captured')) {
+          const strVal = String(rawVal || '').trim().toUpperCase();
+          colCell.value = strVal || (rawVal || '');
+          colCell.alignment = { vertical: 'middle', horizontal: 'center' };
+          colCell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FF000000' } };
+
+          if (strVal === 'YES') {
+            colCell.fill = {
+              type: 'pattern',
+              pattern: 'solid',
+              fgColor: { argb: 'FF00B050' } // Bright Green as in image
+            };
+          } else if (strVal === 'NO') {
+            colCell.fill = {
+              type: 'pattern',
+              pattern: 'solid',
+              fgColor: { argb: 'FFFF0000' } // Bright Red as in image
+            };
+          }
+          return;
+        }
+
+        if (['eBK Mobile Number', 'Transaction Start Date', 'Financial Intermediary'].includes(col.header)) {
+          colCell.value = rawVal !== undefined ? rawVal : '';
+          colCell.alignment = { vertical: 'middle', horizontal: 'center' };
+          return;
+        }
+
+        if (['VO Name', 'eBK Name'].includes(col.header)) {
+          colCell.value = rawVal !== undefined ? rawVal : '';
+          colCell.alignment = { vertical: 'middle', horizontal: 'left' };
+          return;
+        }
+      }
 
       // --------------------------------------------------
       // FORMULA INJECTION FOR VO (VO Transactions)
@@ -532,7 +572,7 @@ export async function exportToStyledExcel({
   // ----------------------------------------------------
   // 5. Total Row: Bold Red Text & Formulas as in Image
   // ----------------------------------------------------
-  if (totals && rows.length > 0) {
+  if (!isVoIndividual && totals && rows.length > 0) {
     const totalRowIdx = currentRowIdx;
     const totalRow = sheet.getRow(totalRowIdx);
     totalRow.height = 24;

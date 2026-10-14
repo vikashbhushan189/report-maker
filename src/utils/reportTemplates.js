@@ -218,6 +218,87 @@ export function generateVoColumns(selectedMonths = ['March 2026']) {
 }
 
 /**
+ * Detect all monthly groups for Individual VO reports (e.g. "March 2026 - Transactions Captured")
+ */
+export function detectVoIndividualMonths(headers = []) {
+  const months = [];
+  headers.forEach(h => {
+    const match = String(h || '').match(/^(.*?)\s*-\s*Transactions?\s*Captured/i);
+    if (match) {
+      const mName = match[1].trim();
+      if (!months.includes(mName)) {
+        months.push(mName);
+      }
+    }
+  });
+  return months;
+}
+
+/**
+ * Dynamically builds column definitions for selected T01 Individual VO months
+ */
+export function generateVoIndividualColumns(selectedMonths = ['March 2026']) {
+  const cols = [
+    {
+      id: 'col_vo_name',
+      header: 'VO Name',
+      type: 'source',
+      sourceCol: 'VO Name',
+      format: 'text',
+      summaryOp: 'none'
+    },
+    {
+      id: 'col_ebk_name',
+      header: 'eBK Name',
+      type: 'source',
+      sourceCol: 'eBK Name',
+      format: 'text',
+      summaryOp: 'none'
+    },
+    {
+      id: 'col_ebk_mobile',
+      header: 'eBK Mobile Number',
+      type: 'source',
+      sourceCol: 'eBK Mobile Number',
+      format: 'text',
+      summaryOp: 'none'
+    },
+    {
+      id: 'col_tx_start_date',
+      header: 'Transaction Start Date',
+      type: 'source',
+      sourceCol: 'Transaction Start Date',
+      format: 'text',
+      summaryOp: 'none'
+    },
+    {
+      id: 'col_fin_inter',
+      header: 'Financial Intermediary',
+      type: 'source',
+      sourceCol: 'Financial Intermediary',
+      format: 'text',
+      summaryOp: 'none'
+    }
+  ];
+
+  selectedMonths.forEach(m => {
+    cols.push({
+      id: `col_${m.replace(/\s+/g, '_')}_captured`,
+      header: `${m} - Transactions Captured`,
+      type: 'source',
+      sourceCol: `${m} - Transactions Captured`,
+      fallbackCol: `${m} - Transaction Captured`,
+      format: 'text',
+      summaryOp: 'none',
+      cellStyle: 'vo_yes_no',
+      monthGroup: m
+    });
+  });
+
+  return cols;
+}
+
+/**
  * Parses date string in DD-MM-YYYY or YYYY-MM-DD
  */
 export function parseDateDDMMYYYY(str) {
@@ -349,6 +430,27 @@ export const REPORT_TOPICS = [
     defaultMonths: ['March 2026'],
     description: 'Official T01 VO Transaction Monitoring format (CLF Wise) with 3-box header (District, Block, Date), dynamic month selection (March, Feb, Jan), and color-coded percentages.',
     columns: generateVoColumns(['March 2026'])
+  },
+  {
+    id: 't01_vo_individual',
+    topicName: 'T01 - VO Transactions Monitoring Status (Individual CLF / VO Wise)',
+    badge: 'Individual CLF VO List',
+    isPrimary: false,
+    title: 'T01 - VO Transactions Monitoring Status',
+    subtitle: 'T01 - VO Transactions Monitoring Status',
+    companyName: 'Block: KOTWA',
+    district: 'PURBI CHAMPARAN',
+    block: 'KOTWA',
+    dateLabel: 'Date:-12-10-2026',
+    currentDate: '12-10-2026',
+    theme: 'ekyc_olive',
+    layoutType: 't01_vo_individual_grid',
+    sortByCol: 'March 2026 - Transactions Captured',
+    sortDir: 'desc',
+    allMonths: ['March 2026', 'February 2026', 'January 2026'],
+    defaultMonths: ['March 2026'],
+    description: 'Official T01 VO Transaction Monitoring format for Individual CLF with VO Name, eBK Name, eBK Mobile Number, Transaction Start Date, Financial Intermediary, and Green/Red Captured Status.',
+    columns: generateVoIndividualColumns(['March 2026'])
   },
   {
     id: 'ekyc_progress',
