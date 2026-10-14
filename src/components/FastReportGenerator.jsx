@@ -25,6 +25,7 @@ export default function FastReportGenerator({
   isExporting,
   reportMeta,
   setReportMeta,
+  onEkycDateChange,
   rowCount,
   fileName,
   activeTab,
@@ -93,8 +94,8 @@ export default function FastReportGenerator({
 
       {/* Control Grid: 3 Simple Fields for Staff */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
-        {/* Step 1: Select Topic Dropdown (Span 5 cols) */}
-        <div className="md:col-span-5 bg-slate-50 p-3 rounded-xl border border-slate-200">
+        {/* Step 1: Select Topic Dropdown (Span 4 cols) */}
+        <div className="md:col-span-4 bg-slate-50 p-3 rounded-xl border border-slate-200">
           <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1 flex items-center justify-between">
             <span className="flex items-center gap-1.5 text-emerald-800">
               <span className="w-4 h-4 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px] font-bold">1</span>
@@ -165,12 +166,12 @@ export default function FastReportGenerator({
           </div>
         </div>
 
-        {/* Step 3: Date & Location Details (Span 3 cols) */}
-        <div className="md:col-span-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
+        {/* Step 3: Date & Location Details (Span 4 cols) */}
+        <div className="md:col-span-4 bg-slate-50 p-3 rounded-xl border border-slate-200">
           <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1 flex items-center justify-between">
             <span className="flex items-center gap-1.5 text-emerald-800">
               <span className="w-4 h-4 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px] font-bold">3</span>
-              {selectedTopicId === 't01_transactions' ? 'Header & Date:' : 'Date & Block:'}
+              {selectedTopicId === 't01_transactions' ? 'Header & Date:' : 'Report Dates & Block:'}
             </span>
           </label>
 
@@ -214,33 +215,64 @@ export default function FastReportGenerator({
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-3 gap-1.5">
-              <div>
-                <span className="text-[9px] text-slate-400 block truncate">Current Date</span>
-                <input
-                  type="text"
-                  value={reportMeta.currentDate || '12-10-2026'}
-                  onChange={(e) => setReportMeta({ ...reportMeta, currentDate: e.target.value, dateLabel: `Date:-${e.target.value}` })}
-                  className="w-full bg-white border border-slate-300 rounded px-1.5 py-1 text-[11px] font-bold text-slate-800 focus:outline-hidden"
-                />
+            <div className="space-y-1.5">
+              <div className="grid grid-cols-2 gap-1.5">
+                <div>
+                  <span className="text-[9px] text-slate-500 font-semibold block truncate" title="Report Generation Date (Today)">
+                    Today Date (Current)
+                  </span>
+                  <input
+                    type="text"
+                    value={reportMeta.todayDate || reportMeta.currentDate || '13-10-2026'}
+                    onChange={(e) => onEkycDateChange ? onEkycDateChange({ today: e.target.value }) : setReportMeta({ ...reportMeta, todayDate: e.target.value })}
+                    placeholder="DD-MM-YYYY"
+                    className="w-full bg-white border border-slate-300 rounded px-1.5 py-1 text-[11px] font-bold text-slate-800 focus:outline-hidden focus:border-emerald-500"
+                  />
+                </div>
+                <div>
+                  <span className="text-[9px] text-emerald-800 font-semibold block truncate" title="Latest e-KYC Data Date (Yesterday)">
+                    Yesterday (e-KYC)
+                  </span>
+                  <input
+                    type="text"
+                    value={reportMeta.yesterdayDate || reportMeta.prevDate || '12-10-2026'}
+                    onChange={(e) => onEkycDateChange ? onEkycDateChange({ yesterday: e.target.value }) : setReportMeta({ ...reportMeta, yesterdayDate: e.target.value })}
+                    placeholder="DD-MM-YYYY"
+                    className="w-full bg-white border border-emerald-400 rounded px-1.5 py-1 text-[11px] font-bold text-emerald-950 focus:outline-hidden bg-emerald-50/40"
+                  />
+                </div>
               </div>
-              <div>
-                <span className="text-[9px] text-slate-400 block truncate">Prev Date</span>
-                <input
-                  type="text"
-                  value={reportMeta.prevDate || '10-10-2026'}
-                  onChange={(e) => setReportMeta({ ...reportMeta, prevDate: e.target.value })}
-                  className="w-full bg-white border border-amber-300 rounded px-1.5 py-1 text-[11px] font-bold text-amber-950 focus:outline-hidden bg-amber-50/50"
-                />
+
+              <div className="grid grid-cols-2 gap-1.5">
+                <div>
+                  <span className="text-[9px] text-amber-800 font-semibold block truncate" title="Benchmark Date (Day Before Yesterday / Prev Working Day)">
+                    Day Before Yesterday
+                  </span>
+                  <input
+                    type="text"
+                    value={reportMeta.dayBeforeYesterdayDate || '10-10-2026'}
+                    onChange={(e) => onEkycDateChange ? onEkycDateChange({ dayBeforeYesterday: e.target.value }) : setReportMeta({ ...reportMeta, dayBeforeYesterdayDate: e.target.value })}
+                    placeholder="DD-MM-YYYY"
+                    className="w-full bg-white border border-amber-300 rounded px-1.5 py-1 text-[11px] font-bold text-amber-950 focus:outline-hidden bg-amber-50/50"
+                  />
+                </div>
+                <div>
+                  <span className="text-[9px] text-slate-500 font-semibold block truncate">Block</span>
+                  <input
+                    type="text"
+                    value={reportMeta.companyName || 'Block: KOTWA'}
+                    onChange={(e) => setReportMeta({ ...reportMeta, companyName: e.target.value })}
+                    className="w-full bg-white border border-slate-300 rounded px-1.5 py-1 text-[11px] font-bold text-slate-800 focus:outline-hidden"
+                  />
+                </div>
               </div>
-              <div>
-                <span className="text-[9px] text-slate-400 block truncate">Block</span>
-                <input
-                  type="text"
-                  value={reportMeta.companyName || 'Block: KOTWA'}
-                  onChange={(e) => setReportMeta({ ...reportMeta, companyName: e.target.value })}
-                  className="w-full bg-white border border-slate-300 rounded px-1.5 py-1 text-[11px] font-bold text-slate-800 focus:outline-hidden"
-                />
+
+              {/* Explanatory preview line */}
+              <div className="pt-0.5 text-[9px] text-emerald-800 font-medium truncate flex items-center justify-between" title={`Excel headers: With e-KYC Adhaar ${reportMeta.yesterdayDate || '12-10-2026'} & With e-KYC Adhaar ${reportMeta.dayBeforeYesterdayDate || '10-10-2026'}`}>
+                <span>Excel headers:</span>
+                <span className="font-bold text-slate-700">
+                  {reportMeta.yesterdayDate || '12-10-2026'} &amp; {reportMeta.dayBeforeYesterdayDate || '10-10-2026'}
+                </span>
               </div>
             </div>
           )}

@@ -150,7 +150,7 @@ export async function exportToStyledExcel({
 
     const blockText = reportMeta.companyName || 'Block: KOTWA';
     const centerText = reportMeta.subtitle || 'S01 - Member KYC Details Panchayat: All Panchayats';
-    const dateText = reportMeta.dateLabel || 'Date:-12-10-2026';
+    const dateText = reportMeta.dateLabel || `Date:-${reportMeta.yesterdayDate || reportMeta.currentDate || '12-10-2026'}`;
 
     const colSplit1 = 4;
     const colSplit2 = Math.min(13, totalColsCount - 4);
@@ -291,8 +291,11 @@ export async function exportToStyledExcel({
       if (isEkyc) {
         const colTotalMembers = colLetterMap['No. of Members *'];
         const colAadhar = colLetterMap['With Aadhar'];
-        const colEkycCurr = colLetterMap['With e-KYC Adhaar 12-10-2026'] || colLetterMap['With e-KYC Adhaar'];
-        const colEkycPrev = colLetterMap['With e-KYC Adhaar 10-10-2026'] || colLetterMap['With e-KYC Adhaar Prev'];
+        const currColObj = columns.find(c => c.isEkycCurr || (c.header.startsWith('With e-KYC Adhaar') && !c.isManualEditable));
+        const prevColObj = columns.find(c => c.isEkycPrev || c.isManualEditable || c.manualKey === 'ekyc_prev');
+
+        const colEkycCurr = currColObj ? colLetterMap[currColObj.header] : (colLetterMap['With e-KYC Adhaar 12-10-2026'] || colLetterMap['With e-KYC Adhaar']);
+        const colEkycPrev = prevColObj ? colLetterMap[prevColObj.header] : (colLetterMap['With e-KYC Adhaar 10-10-2026'] || colLetterMap['With e-KYC Adhaar Prev']);
         const colMobile = colLetterMap['With Mobile No.'];
         const colMobVer = colLetterMap['With Mobile No. Verified'];
 
@@ -528,7 +531,8 @@ export async function exportToStyledExcel({
       if (isEkyc) {
         const colTotalMembers = colLetterMap['No. of Members *'];
         const colAadhar = colLetterMap['With Aadhar'];
-        const colEkycCurr = colLetterMap['With e-KYC Adhaar 12-10-2026'] || colLetterMap['With e-KYC Adhaar'];
+        const currColObj = columns.find(c => c.isEkycCurr || (c.header.startsWith('With e-KYC Adhaar') && !c.isManualEditable));
+        const colEkycCurr = currColObj ? colLetterMap[currColObj.header] : (colLetterMap['With e-KYC Adhaar 12-10-2026'] || colLetterMap['With e-KYC Adhaar']);
         const colMobile = colLetterMap['With Mobile No.'];
         const colMobVer = colLetterMap['With Mobile No. Verified'];
 

@@ -96,16 +96,19 @@ export default function ReportViewer({
   const { panchayatsList, currentEkycMap } = useMemo(() => {
     const list = [];
     const map = {};
+    const currColObj = columns.find(c => c.isEkycCurr || (c.header.startsWith('With e-KYC Adhaar') && !c.isManualEditable));
+    const currHeader = currColObj ? currColObj.header : 'With e-KYC Adhaar';
+
     rows.forEach(r => {
       const gp = String(r['Gram Panchayat'] || '').trim();
       if (gp && !list.includes(gp)) {
         list.push(gp);
-        const currVal = r['With e-KYC Adhaar 12-10-2026'] || r['With e-KYC Adhaar'] || 0;
+        const currVal = r[currHeader] !== undefined ? r[currHeader] : (r['With e-KYC Adhaar 12-10-2026'] || r['With e-KYC Adhaar'] || 0);
         map[gp] = Number(currVal);
       }
     });
     return { panchayatsList: list, currentEkycMap: map };
-  }, [rows]);
+  }, [rows, columns]);
 
   // Helper for progress cell color in e-KYC report
   const getProgressBg = (val) => {
@@ -173,7 +176,7 @@ export default function ReportViewer({
               title="Manually fill or paste previous day e-KYC counts"
             >
               <Edit3 className="w-3.5 h-3.5 text-amber-700" />
-              <span>Fill Previous Day e-KYC ({reportMeta.prevDate || '10-10-2026'})</span>
+              <span>Fill Previous Day e-KYC ({reportMeta.dayBeforeYesterdayDate || reportMeta.prevDate || '10-10-2026'})</span>
             </button>
           )}
         </div>
@@ -256,7 +259,7 @@ export default function ReportViewer({
                 <span>{reportMeta.subtitle || 'S01 - Member KYC Details Panchayat: All Panchayats'}</span>
               </div>
               <div className="md:col-span-3 py-2 px-4 text-center flex items-center justify-center">
-                <span>{reportMeta.dateLabel || 'Date:-12-10-2026'}</span>
+                <span>{reportMeta.dateLabel || `Date:-${reportMeta.yesterdayDate || '12-10-2026'}`}</span>
               </div>
             </div>
           </div>
@@ -501,8 +504,8 @@ export default function ReportViewer({
         currentEkycMap={currentEkycMap}
         manualValues={manualValues}
         onSaveManualValues={onSaveManualValues}
-        prevDateLabel={reportMeta.prevDate || '10-10-2026'}
-        currentDateLabel={reportMeta.currentDate || '12-10-2026'}
+        prevDateLabel={reportMeta.dayBeforeYesterdayDate || reportMeta.prevDate || '10-10-2026'}
+        currentDateLabel={reportMeta.yesterdayDate || reportMeta.currentDate || '12-10-2026'}
       />
     </div>
   );

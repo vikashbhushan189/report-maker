@@ -283,7 +283,8 @@ export function generateReportData(
   // 5. Accurate Weighted Ratio Totals for Percentages
   const totalMembers = totals['No. of Members *'];
   const totalWithAadhar = totals['With Aadhar'];
-  const totalEkycCurr = totals['With e-KYC Adhaar 12-10-2026'] || totals['With e-KYC Adhaar'];
+  const ekycCurrCol = columnConfigs.find(c => c.isEkycCurr || (c.header.startsWith('With e-KYC Adhaar') && !c.isManualEditable));
+  const totalEkycCurr = ekycCurrCol ? totals[ekycCurrCol.header] : (totals['With e-KYC Adhaar 12-10-2026'] || totals['With e-KYC Adhaar']);
   const totalGap = totals['e-KYC Gap'];
   const totalMobile = totals['With Mobile No.'];
   const totalMobileVerified = totals['With Mobile No. Verified'];

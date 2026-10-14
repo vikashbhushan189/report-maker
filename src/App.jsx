@@ -7,7 +7,7 @@ import ReportViewer from './components/ReportViewer';
 import SplitView from './components/SplitView';
 import { SAMPLE_DATASETS } from './utils/sampleData';
 import { parseExcelFile, parseRawText, extractSheetData, analyzeColumns } from './utils/excelReader';
-import { REPORT_TOPICS, REPORT_THEMES, detectT01Months, generateT01Columns } from './utils/reportTemplates';
+import { REPORT_TOPICS, REPORT_THEMES, detectT01Months, generateT01Columns, generateEkycColumns, getPreviousDate } from './utils/reportTemplates';
 import { generateReportData } from './utils/formulaEngine';
 import { exportToStyledExcel, exportToCSV } from './utils/excelExporter';
 import { CheckCircle2, AlertCircle } from 'lucide-react';
@@ -21,7 +21,14 @@ export default function App() {
     title: 'S01 - Member KYC Details',
     subtitle: 'S01 - Member KYC Details Panchayat: All Panchayats',
     companyName: 'Block: KOTWA',
+    district: 'PURBI CHAMPARAN',
+    panchayat: 'All Panchayats',
+    todayDate: '13-10-2026',
+    yesterdayDate: '12-10-2026',
+    dayBeforeYesterdayDate: '10-10-2026',
     dateLabel: 'Date:-12-10-2026',
+    currentDate: '13-10-2026',
+    prevDate: '12-10-2026',
     theme: 'ekyc_olive',
     layoutType: 'ekyc_grid',
     sortByCol: 'e-KYC Gap',
@@ -60,12 +67,53 @@ export default function App() {
     }
   };
 
+  // Handle dynamic e-KYC date updates:
+  // When Today's date is set, Yesterday = -1 day (or skip Sun), DayBeforeYesterday = -1 day (or skip Sun).
+  // Column 1 will show: "With e-KYC Adhaar [Yesterday]"
+  // Column 2 will show: "With e-KYC Adhaar [Day Before Yesterday]"
+  // Subheader will show: "Date:-[Yesterday]"
+  const handleEkycDateChange = ({ today, yesterday, dayBeforeYesterday }) => {
+    let tDate = today !== undefined ? today : (reportMeta.todayDate || '13-10-2026');
+    let yDate = yesterday;
+    let prevYDate = dayBeforeYesterday;
+
+    if (today !== undefined && yesterday === undefined) {
+      yDate = getPreviousDate(tDate, 1) || '12-10-2026';
+      prevYDate = getPreviousDate(yDate, 1) || '10-10-2026';
+    } else if (yesterday !== undefined && dayBeforeYesterday === undefined) {
+      yDate = yesterday;
+      prevYDate = getPreviousDate(yDate, 1) || '10-10-2026';
+    } else {
+      yDate = yDate !== undefined ? yDate : (reportMeta.yesterdayDate || '12-10-2026');
+      prevYDate = prevYDate !== undefined ? prevYDate : (reportMeta.dayBeforeYesterdayDate || '10-10-2026');
+    }
+
+    setReportMeta(prev => ({
+      ...prev,
+      todayDate: tDate,
+      yesterdayDate: yDate,
+      dayBeforeYesterdayDate: prevYDate,
+      currentDate: tDate,
+      prevDate: yDate,
+      dateLabel: `Date:-${yDate}`
+    }));
+
+    if (selectedTopicId === 'ekyc_progress') {
+      setColumns(generateEkycColumns(yDate, prevYDate));
+    }
+  };
+
   // Switch report topic
   const handleSelectTopic = (topicId) => {
     const topic = REPORT_TOPICS.find(t => t.id === topicId) || REPORT_TOPICS[0];
     setSelectedTopicId(topic.id);
 
+    const isEkyc = topic.id === 'ekyc_progress';
     const isT01 = topic.id === 't01_transactions';
+
+    const defaultDateLabel = isT01
+      ? (topic.dateLabel || 'Date:-10-10-2026')
+      : `Date:-${reportMeta.yesterdayDate || topic.yesterdayDate || '12-10-2026'}`;
 
     setReportMeta(prev => ({
       ...prev,
@@ -75,9 +123,12 @@ export default function App() {
       companyName: topic.companyName || prev.companyName || 'Block: KOTWA',
       district: topic.district || prev.district || 'PURBI CHAMPARAN',
       panchayat: topic.panchayat || prev.panchayat || 'All Panchayats',
-      dateLabel: topic.dateLabel || prev.dateLabel || 'Date:-10-10-2026',
-      currentDate: topic.currentDate || prev.currentDate || '10-10-2026',
-      prevDate: topic.prevDate || prev.prevDate || '10-10-2026',
+      todayDate: prev.todayDate || topic.todayDate || '13-10-2026',
+      yesterdayDate: prev.yesterdayDate || topic.yesterdayDate || '12-10-2026',
+      dayBeforeYesterdayDate: prev.dayBeforeYesterdayDate || topic.dayBeforeYesterdayDate || '10-10-2026',
+      dateLabel: defaultDateLabel,
+      currentDate: isT01 ? (topic.currentDate || '10-10-2026') : (prev.todayDate || '13-10-2026'),
+      prevDate: isT01 ? (topic.prevDate || '10-10-2026') : (prev.yesterdayDate || '12-10-2026'),
       theme: topic.theme || 'ekyc_olive',
       layoutType: topic.layoutType || (isT01 ? 't01_grid' : 'ekyc_grid'),
       sortByCol: topic.sortByCol || '',
@@ -94,6 +145,15 @@ export default function App() {
 
       if (!fileInfo || !fileInfo.headers.some(h => h.includes('Total SHGs'))) {
         loadDataset('t01_transactions');
+        return;
+      }
+    } else if (isEkyc) {
+      const yDate = reportMeta.yesterdayDate || topic.yesterdayDate || '12-10-2026';
+      const prevYDate = reportMeta.dayBeforeYesterdayDate || topic.dayBeforeYesterdayDate || '10-10-2026';
+      setColumns(generateEkycColumns(yDate, prevYDate));
+
+      if (fileInfo && fileInfo.headers.some(h => h.includes('Total SHGs'))) {
+        loadDataset('ekyc');
         return;
       }
     } else {
@@ -201,8 +261,14 @@ export default function App() {
         }));
       }
 
-      const currentTopic = REPORT_TOPICS.find(t => t.id === selectedTopicId) || REPORT_TOPICS[0];
-      setColumns(currentTopic.columns || []);
+      if (selectedTopicId === 'ekyc_progress') {
+        const yDate = reportMeta.yesterdayDate || '12-10-2026';
+        const prevYDate = reportMeta.dayBeforeYesterdayDate || '10-10-2026';
+        setColumns(generateEkycColumns(yDate, prevYDate));
+      } else {
+        const currentTopic = REPORT_TOPICS.find(t => t.id === selectedTopicId) || REPORT_TOPICS[0];
+        setColumns(currentTopic.columns || []);
+      }
     }
 
     setActiveTab('report');
@@ -348,6 +414,7 @@ export default function App() {
           isExporting={isExporting}
           reportMeta={reportMeta}
           setReportMeta={setReportMeta}
+          onEkycDateChange={handleEkycDateChange}
           rowCount={fileInfo?.data?.length || 0}
           fileName={fileInfo?.filename}
           activeTab={activeTab}

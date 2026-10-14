@@ -131,6 +131,95 @@ export function generateT01Columns(selectedMonths = ['September 2026', 'August 2
   return cols;
 }
 
+/**
+ * Parses date string in DD-MM-YYYY or YYYY-MM-DD
+ */
+export function parseDateDDMMYYYY(str) {
+  if (!str) return null;
+  const parts = String(str).trim().split(/[-/.]/);
+  if (parts.length === 3) {
+    let d, m, y;
+    if (parts[0].length === 4) {
+      y = parseInt(parts[0], 10);
+      m = parseInt(parts[1], 10) - 1;
+      d = parseInt(parts[2], 10);
+    } else {
+      d = parseInt(parts[0], 10);
+      m = parseInt(parts[1], 10) - 1;
+      y = parseInt(parts[2], 10);
+    }
+    const dt = new Date(y, m, d);
+    if (!isNaN(dt.getTime())) return dt;
+  }
+  return null;
+}
+
+export function formatDateDDMMYYYY(date) {
+  if (!(date instanceof Date) || isNaN(date.getTime())) return '';
+  const d = String(date.getDate()).padStart(2, '0');
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const y = date.getFullYear();
+  return `${d}-${m}-${y}`;
+}
+
+/**
+ * Calculates previous working day:
+ * If target date is Monday, previous working date is Saturday (-2 days).
+ * Otherwise, -1 day.
+ */
+export function getPreviousDate(dateStr, offset = 1) {
+  const dt = parseDateDDMMYYYY(dateStr);
+  if (!dt) return '';
+  const dayOfWeek = dt.getDay(); // 0 = Sun, 1 = Mon...
+  let daysToSubtract = offset;
+  if (offset === 1 && dayOfWeek === 1) {
+    // If it's Monday, jump back to Saturday (skip Sunday)
+    daysToSubtract = 2;
+  }
+  dt.setDate(dt.getDate() - daysToSubtract);
+  return formatDateDDMMYYYY(dt);
+}
+
+/**
+ * Dynamically builds column definitions for S01 e-KYC report
+ * using the specified Yesterday Date and Day-Before-Yesterday Date
+ */
+export function generateEkycColumns(yesterdayDate = '12-10-2026', dayBeforeYesterdayDate = '10-10-2026') {
+  const currHeader = `With e-KYC Adhaar ${yesterdayDate}`;
+  const prevHeader = `With e-KYC Adhaar ${dayBeforeYesterdayDate}`;
+
+  return [
+    { id: 'col_gp', header: 'Gram Panchayat', type: 'source', sourceCol: 'Gram Panchayat', format: 'text', summaryOp: 'none' },
+    { id: 'col_members', header: 'No. of Members *', type: 'source', sourceCol: 'No. of Members *', format: 'number', summaryOp: 'sum' },
+    { id: 'col_aadhar', header: 'With Aadhar', type: 'source', sourceCol: 'With Aadhar', format: 'number', summaryOp: 'sum' },
+    { id: 'col_pct_aadhar', header: '% With Aadhar', type: 'formula', formula: '([With Aadhar] / [No. of Members *]) * 100', format: 'percent', summaryOp: 'avg' },
+    { id: 'col_ekyc_curr', header: currHeader, type: 'source', sourceCol: 'With e-KYC Adhaar', format: 'number', summaryOp: 'sum', cellStyle: 'green_highlight', isEkycCurr: true },
+    {
+      id: 'col_ekyc_prev',
+      header: prevHeader,
+      type: 'manual', // Manual editable column
+      isManualEditable: true,
+      manualKey: 'ekyc_prev',
+      sourceCol: 'With e-KYC Adhaar Prev',
+      fallbackCol: 'With e-KYC Adhaar',
+      format: 'number',
+      summaryOp: 'sum',
+      helpText: 'Click to edit or upload yesterday file',
+      isEkycPrev: true
+    },
+    { id: 'col_pct_ekyc', header: '% With e-KYC Adhaar', type: 'formula', formula: `([${currHeader}] / [No. of Members *]) * 100`, format: 'percent', summaryOp: 'avg' },
+    { id: 'col_gap', header: 'e-KYC Gap', type: 'formula', formula: `[With Aadhar] - [${currHeader}]`, format: 'number', summaryOp: 'sum', cellStyle: 'red_highlight', headerColor: '#c00000' },
+    { id: 'col_pct_gap', header: '% e-KYC Gap', type: 'formula', formula: `([e-KYC Gap] / [No. of Members *]) * 100`, format: 'percent', summaryOp: 'avg', indicator: 'arrow_gap', headerColor: '#c00000' },
+    { id: 'col_progress', header: 'Yesterday e-KYC Progress', type: 'formula', formula: `[${currHeader}] - [${prevHeader}]`, format: 'integer', summaryOp: 'sum', cellStyle: 'progress_badge' },
+    { id: 'col_mob', header: 'With Mobile No.', type: 'source', sourceCol: 'With Mobile No.', format: 'number', summaryOp: 'sum' },
+    { id: 'col_pct_mob', header: '% With Mobile No.', type: 'formula', formula: '([With Mobile No.] / [No. of Members *]) * 100', format: 'percent', summaryOp: 'avg' },
+    { id: 'col_mob_ver', header: 'With Mobile No. Verified', type: 'source', sourceCol: 'With Mobile No. Verified', format: 'number', summaryOp: 'sum', cellStyle: 'green_highlight' },
+    { id: 'col_pct_mob_ver', header: '% With Mobile No. Verified', type: 'formula', formula: '([With Mobile No. Verified] / [With Mobile No.]) * 100', format: 'percent', summaryOp: 'avg' },
+    { id: 'col_mob_not_ver', header: 'With Mobile No. Not Verified', type: 'formula', formula: '[With Mobile No.] - [With Mobile No. Verified]', format: 'number', summaryOp: 'sum', cellStyle: 'red_highlight' },
+    { id: 'col_pct_mob_not_ver', header: '% With Mobile No. Not Verified', type: 'formula', formula: '([With Mobile No. Not Verified] / [With Mobile No.]) * 100', format: 'percent', summaryOp: 'avg', indicator: 'arrow_not_ver', headerColor: '#c00000' }
+  ];
+}
+
 export const REPORT_TOPICS = [
   {
     id: 't01_transactions',
@@ -162,43 +251,18 @@ export const REPORT_TOPICS = [
     title: 'S01 - Member KYC Details',
     subtitle: 'S01 - Member KYC Details Panchayat: All Panchayats',
     companyName: 'Block: KOTWA',
+    todayDate: '13-10-2026',
+    yesterdayDate: '12-10-2026',
+    dayBeforeYesterdayDate: '10-10-2026',
+    currentDate: '13-10-2026',
+    prevDate: '12-10-2026',
     dateLabel: 'Date:-12-10-2026',
-    currentDate: '12-10-2026',
-    prevDate: '10-10-2026',
     theme: 'ekyc_olive',
     layoutType: 'ekyc_grid',
     sortByCol: 'e-KYC Gap',
     sortDir: 'desc',
     description: 'Exact replica of the S01 report: ranks Gram Panchayats by e-KYC Gap, calculates progress deltas, mobile verification ratios, and red total summary row.',
-    columns: [
-      { id: 'col_gp', header: 'Gram Panchayat', type: 'source', sourceCol: 'Gram Panchayat', format: 'text', summaryOp: 'none' },
-      { id: 'col_members', header: 'No. of Members *', type: 'source', sourceCol: 'No. of Members *', format: 'number', summaryOp: 'sum' },
-      { id: 'col_aadhar', header: 'With Aadhar', type: 'source', sourceCol: 'With Aadhar', format: 'number', summaryOp: 'sum' },
-      { id: 'col_pct_aadhar', header: '% With Aadhar', type: 'formula', formula: '([With Aadhar] / [No. of Members *]) * 100', format: 'percent', summaryOp: 'avg' },
-      { id: 'col_ekyc_curr', header: 'With e-KYC Adhaar 12-10-2026', type: 'source', sourceCol: 'With e-KYC Adhaar', format: 'number', summaryOp: 'sum', cellStyle: 'green_highlight' },
-      {
-        id: 'col_ekyc_prev',
-        header: 'With e-KYC Adhaar 10-10-2026',
-        type: 'manual', // Manual editable column
-        isManualEditable: true,
-        manualKey: 'ekyc_prev',
-        sourceCol: 'With e-KYC Adhaar Prev',
-        fallbackCol: 'With e-KYC Adhaar',
-        format: 'number',
-        summaryOp: 'sum',
-        helpText: 'Click to edit or upload yesterday file'
-      },
-      { id: 'col_pct_ekyc', header: '% With e-KYC Adhaar', type: 'formula', formula: '([With e-KYC Adhaar 12-10-2026] / [No. of Members *]) * 100', format: 'percent', summaryOp: 'avg' },
-      { id: 'col_gap', header: 'e-KYC Gap', type: 'formula', formula: '[With Aadhar] - [With e-KYC Adhaar 12-10-2026]', format: 'number', summaryOp: 'sum', cellStyle: 'red_highlight', headerColor: '#c00000' },
-      { id: 'col_pct_gap', header: '% e-KYC Gap', type: 'formula', formula: '([e-KYC Gap] / [No. of Members *]) * 100', format: 'percent', summaryOp: 'avg', indicator: 'arrow_gap', headerColor: '#c00000' },
-      { id: 'col_progress', header: 'Yesterday e-KYC Progress', type: 'formula', formula: '[With e-KYC Adhaar 12-10-2026] - [With e-KYC Adhaar 10-10-2026]', format: 'integer', summaryOp: 'sum', cellStyle: 'progress_badge' },
-      { id: 'col_mob', header: 'With Mobile No.', type: 'source', sourceCol: 'With Mobile No.', format: 'number', summaryOp: 'sum' },
-      { id: 'col_pct_mob', header: '% With Mobile No.', type: 'formula', formula: '([With Mobile No.] / [No. of Members *]) * 100', format: 'percent', summaryOp: 'avg' },
-      { id: 'col_mob_ver', header: 'With Mobile No. Verified', type: 'source', sourceCol: 'With Mobile No. Verified', format: 'number', summaryOp: 'sum', cellStyle: 'green_highlight' },
-      { id: 'col_pct_mob_ver', header: '% With Mobile No. Verified', type: 'formula', formula: '([With Mobile No. Verified] / [With Mobile No.]) * 100', format: 'percent', summaryOp: 'avg' },
-      { id: 'col_mob_not_ver', header: 'With Mobile No. Not Verified', type: 'formula', formula: '[With Mobile No.] - [With Mobile No. Verified]', format: 'number', summaryOp: 'sum', cellStyle: 'red_highlight' },
-      { id: 'col_pct_mob_not_ver', header: '% With Mobile No. Not Verified', type: 'formula', formula: '([With Mobile No. Not Verified] / [With Mobile No.]) * 100', format: 'percent', summaryOp: 'avg', indicator: 'arrow_not_ver', headerColor: '#c00000' }
-    ]
+    columns: generateEkycColumns('12-10-2026', '10-10-2026')
   },
   {
     id: 'bank_seeding',
