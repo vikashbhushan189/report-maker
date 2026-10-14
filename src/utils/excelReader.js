@@ -1,5 +1,5 @@
 import * as XLSX from 'xlsx';
-import { detectT01Months } from './reportTemplates.js';
+import { detectT01Months, detectVoMonths } from './reportTemplates.js';
 
 /**
  * Reads an Excel or CSV File object and returns parsed workbook information
@@ -117,7 +117,10 @@ export function extractSheetData(workbook, sheetName) {
 
   for (let i = 0; i < Math.min(rawJson.length, 5); i++) {
     const rowStr = rawJson[i].map(c => String(c || '').trim()).join(' ');
-    if (rowStr.toLowerCase().includes('transactions monitoring') || rowStr.toLowerCase().includes('t01')) {
+    if (rowStr.toLowerCase().includes('vo transactions monitoring') || rowStr.toLowerCase().includes('clf name')) {
+      metadata.title = 'T01 - VO Transactions Monitoring Status';
+      metadata.reportType = 't01_vo';
+    } else if (rowStr.toLowerCase().includes('transactions monitoring') || rowStr.toLowerCase().includes('t01')) {
       metadata.title = 'T01 - SHG Transactions Monitoring Status';
       metadata.reportType = 't01';
     } else if (rowStr.toLowerCase().includes('member kyc details')) {
@@ -158,6 +161,7 @@ export function extractSheetData(workbook, sheetName) {
       if (
         rowStrings.includes('gram panchayat') ||
         rowStrings.includes('panchayat') ||
+        rowStrings.includes('clf name') ||
         (rowStrings.includes('state') && rowStrings.includes('district') && rowStrings.includes('block'))
       ) {
         headerRowIndex = r;
@@ -254,7 +258,10 @@ export function extractSheetData(workbook, sheetName) {
     data.push(rowObj);
   }
 
-  const detectedMonths = detectT01Months(cleanHeaders);
+  let detectedMonths = detectT01Months(cleanHeaders);
+  if (!detectedMonths || detectedMonths.length === 0) {
+    detectedMonths = detectVoMonths(cleanHeaders);
+  }
 
   return {
     headers: cleanHeaders,

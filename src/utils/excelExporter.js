@@ -1,6 +1,6 @@
 import ExcelJS from 'exceljs';
 import { REPORT_THEMES } from './reportTemplates.js';
-import { getT01PctColor } from './formulaEngine.js';
+import { getT01PctColor, getVoPctColor } from './formulaEngine.js';
 
 /**
  * Convert 1-indexed column number to Excel column letter (1 -> 'A', 2 -> 'B', etc.)
@@ -29,8 +29,9 @@ export async function exportToStyledExcel({
   filename = 'Report.xlsx'
 }) {
   const theme = REPORT_THEMES[reportMeta.theme] || REPORT_THEMES.ekyc_olive;
-  const isT01 = reportMeta.presetId === 't01_transactions' || reportMeta.layoutType === 't01_grid';
-  const isEkyc = !isT01 && (reportMeta.presetId === 'ekyc_progress' || reportMeta.layoutType === 'ekyc_grid');
+  const isVo = reportMeta.presetId === 't01_vo_transactions' || reportMeta.layoutType === 't01_vo_grid';
+  const isT01 = !isVo && (reportMeta.presetId === 't01_transactions' || reportMeta.layoutType === 't01_grid');
+  const isEkyc = !isVo && !isT01 && (reportMeta.presetId === 'ekyc_progress' || reportMeta.layoutType === 'ekyc_grid');
 
   const workbook = new ExcelJS.Workbook();
   workbook.creator = 'Report Studio';
@@ -38,7 +39,7 @@ export async function exportToStyledExcel({
   workbook.created = new Date();
   workbook.modified = new Date();
 
-  const sheetName = isT01 ? 'SHG Transactions Report' : (isEkyc ? 'KYC Progress Report' : 'Report');
+  const sheetName = isVo ? 'VO Transactions Report' : (isT01 ? 'SHG Transactions Report' : (isEkyc ? 'KYC Progress Report' : 'Report'));
   const sheet = workbook.addWorksheet(sheetName, {
     views: [{ showGridLines: true }],
     pageSetup: { orientation: 'landscape', fitToPage: true, fitToWidth: 1 }
@@ -64,7 +65,68 @@ export async function exportToStyledExcel({
     colLetterMap[col.header] = getColLetter(idx + 2);
   });
 
-  if (isT01) {
+  if (isVo) {
+    // ----------------------------------------------------
+    // 1. VO HEADER: Title Banner (Row 1)
+    // ----------------------------------------------------
+    const titleRow = sheet.getRow(currentRowIdx);
+    titleRow.values = [reportMeta.title || 'T01 - VO Transactions Monitoring Status'];
+    titleRow.height = 28;
+    titleRow.font = { name: 'Calibri', size: 14, bold: true, color: { argb: 'FFC00000' } };
+    titleRow.alignment = { vertical: 'middle', horizontal: 'center' };
+    sheet.mergeCells(currentRowIdx, 1, currentRowIdx, totalColsCount);
+
+    const titleCell = sheet.getCell(currentRowIdx, 1);
+    titleCell.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFE2E8F0' } // Light gray background
+    };
+    for (let c = 1; c <= totalColsCount; c++) {
+      sheet.getCell(currentRowIdx, c).border = borderThin;
+    }
+    currentRowIdx++;
+
+    // ----------------------------------------------------
+    // 2. VO SUBHEADER: 3-Box Row (District, Block, Date)
+    // ----------------------------------------------------
+    const subheaderRow = sheet.getRow(currentRowIdx);
+    subheaderRow.height = 24;
+
+    const districtText = `District: ${reportMeta.district || 'PURBI CHAMPARAN'}`;
+    const blockText = `Block: ${reportMeta.companyName?.replace(/^Block:\s*/i, '').trim() || 'KOTWA'}`;
+    const dateText = `Date:-${reportMeta.currentDate || '13-10-2026'}`;
+
+    const b1End = Math.max(2, Math.floor(totalColsCount * 0.33));
+    const b2End = Math.max(b1End + 1, Math.floor(totalColsCount * 0.67));
+    const b3End = totalColsCount;
+
+    sheet.mergeCells(currentRowIdx, 1, currentRowIdx, b1End);
+    sheet.mergeCells(currentRowIdx, b1End + 1, currentRowIdx, b2End);
+    sheet.mergeCells(currentRowIdx, b2End + 1, currentRowIdx, b3End);
+
+    const formatSubBox = (colStart, text) => {
+      const cell = sheet.getCell(currentRowIdx, colStart);
+      cell.value = text;
+      cell.font = { name: 'Calibri', size: 11, bold: true, color: { argb: 'FFC00000' } };
+      cell.alignment = { vertical: 'middle', horizontal: 'center' };
+    };
+
+    formatSubBox(1, districtText);
+    formatSubBox(b1End + 1, blockText);
+    formatSubBox(b2End + 1, dateText);
+
+    for (let c = 1; c <= totalColsCount; c++) {
+      const cell = sheet.getCell(currentRowIdx, c);
+      cell.border = borderThin;
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFF8FAFC' }
+      };
+    }
+    currentRowIdx++;
+  } else if (isT01) {
     // ----------------------------------------------------
     // 1. T01 HEADER: Title Banner (Row 1)
     // ----------------------------------------------------
@@ -248,6 +310,42 @@ export async function exportToStyledExcel({
 
       const rawVal = row[col.header];
       const numVal = typeof rawVal === 'number' ? rawVal : Number(String(rawVal || '').replace(/[$,%]/g, '').trim());
+
+      // --------------------------------------------------
+      // FORMULA INJECTION FOR VO (VO Transactions)
+      // --------------------------------------------------
+      if (isVo && col.header.includes('Percentage')) {
+        const match = col.header.match(/^(.*?)\s*-\s*Percentage/i);
+        if (match) {
+          const monthPrefix = match[1].trim();
+          const letterIntermediary = colLetterMap[`${monthPrefix} - VOs Financial-Intermediary`] || colLetterMap['Total VOs'];
+          const letterCaptured = colLetterMap[`${monthPrefix} - Transaction Captured`] || colLetterMap[`${monthPrefix} - Transactions Captured`];
+
+          if (letterIntermediary && letterCaptured) {
+            // Live Excel Formula: =IF(D5>0, F5/D5, 0)
+            colCell.value = {
+              formula: `IF(${letterIntermediary}${currentRowIdx}>0, ${letterCaptured}${currentRowIdx}/${letterIntermediary}${currentRowIdx}, 0)`,
+              result: isNaN(numVal) ? 0 : numVal / 100
+            };
+          } else {
+            colCell.value = isNaN(numVal) ? 0 : numVal / 100;
+          }
+        } else {
+          colCell.value = isNaN(numVal) ? 0 : numVal / 100;
+        }
+
+        colCell.numFmt = '0.00%';
+        colCell.alignment = { vertical: 'middle', horizontal: 'right' };
+
+        // Conditional Fill Color
+        const colorMeta = getVoPctColor(numVal);
+        colCell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: colorMeta.excelArgb }
+        };
+        return;
+      }
 
       // --------------------------------------------------
       // FORMULA INJECTION FOR T01 (SHG Transactions)
@@ -467,8 +565,8 @@ export async function exportToStyledExcel({
         right: { style: 'thin', color: { argb: 'FF94A3B8' } }
       };
 
-      if (isT01) {
-        // Pinkish tint for T01 total row
+      if (isVo || isT01) {
+        // Pinkish tint for T01 and VO total row
         colCell.fill = {
           type: 'pattern',
           pattern: 'solid',
@@ -489,6 +587,39 @@ export async function exportToStyledExcel({
 
       const totalVal = totals[col.header];
       const numTotal = typeof totalVal === 'number' ? totalVal : Number(String(totalVal || '').replace(/[$,%]/g, '').trim());
+
+      // --------------------------------------------------
+      // TOTAL FORMULAS FOR VO (VO Transactions)
+      // --------------------------------------------------
+      if (isVo) {
+        if (col.header.includes('Percentage')) {
+          const match = col.header.match(/^(.*?)\s*-\s*Percentage/i);
+          if (match) {
+            const monthPrefix = match[1].trim();
+            const letterIntermediary = colLetterMap[`${monthPrefix} - VOs Financial-Intermediary`] || colLetterMap['Total VOs'];
+            const letterCaptured = colLetterMap[`${monthPrefix} - Transaction Captured`] || colLetterMap[`${monthPrefix} - Transactions Captured`];
+            if (letterIntermediary && letterCaptured) {
+              colCell.value = {
+                formula: `IF(${letterIntermediary}${totalRowIdx}>0, ${letterCaptured}${totalRowIdx}/${letterIntermediary}${totalRowIdx}, 0)`,
+                result: isNaN(numTotal) ? 0 : numTotal / 100
+              };
+            } else {
+              colCell.value = isNaN(numTotal) ? 0 : numTotal / 100;
+            }
+          }
+          colCell.numFmt = '0.00%';
+          colCell.alignment = { vertical: 'middle', horizontal: 'right' };
+          return;
+        }
+
+        colCell.value = {
+          formula: `SUM(${colLetter}${firstDataRowIdx}:${colLetter}${lastDataRowIdx})`,
+          result: isNaN(numTotal) ? 0 : numTotal
+        };
+        colCell.numFmt = '#,##0';
+        colCell.alignment = { vertical: 'middle', horizontal: 'right' };
+        return;
+      }
 
       // --------------------------------------------------
       // TOTAL FORMULAS FOR T01 (SHG Transactions)

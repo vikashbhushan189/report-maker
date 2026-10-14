@@ -129,7 +129,7 @@ export default function FastReportGenerator({
               Raw Data File:
             </span>
             <span className="text-[10px] font-semibold text-emerald-700">
-              {rowCount ? `${rowCount} Panchayats` : 'Ready'}
+              {rowCount ? `${rowCount} ${selectedTopicId === 't01_vo_transactions' ? 'CLFs' : 'Panchayats'}` : 'Ready'}
             </span>
           </label>
 
@@ -144,7 +144,7 @@ export default function FastReportGenerator({
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-white border border-slate-300 hover:border-emerald-500 hover:bg-emerald-50 text-slate-800 text-xs font-semibold rounded-lg shadow-2xs transition"
+              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-white border border-slate-300 hover:border-emerald-500 hover:bg-emerald-50 text-slate-800 text-xs font-semibold rounded-lg shadow-2xs transition cursor-pointer"
             >
               <UploadCloud className="w-4 h-4 text-emerald-600" />
               <span>Upload Excel</span>
@@ -153,7 +153,7 @@ export default function FastReportGenerator({
             <button
               type="button"
               onClick={() => setShowPasteModal(true)}
-              className="flex items-center justify-center gap-1.5 px-3 py-2 bg-white border border-slate-300 hover:border-emerald-500 hover:bg-emerald-50 text-slate-800 text-xs font-semibold rounded-lg shadow-2xs transition"
+              className="flex items-center justify-center gap-1.5 px-3 py-2 bg-white border border-slate-300 hover:border-emerald-500 hover:bg-emerald-50 text-slate-800 text-xs font-semibold rounded-lg shadow-2xs transition cursor-pointer"
               title="Paste CSV or Tab-separated table directly"
             >
               <ClipboardPaste className="w-4 h-4 text-slate-600" />
@@ -162,7 +162,7 @@ export default function FastReportGenerator({
           </div>
 
           <div className="text-[10px] text-slate-500 mt-1 truncate">
-            Current: <span className="font-semibold text-slate-700">{fileName || 'S01_Member_KYC_Details_Kotwa.xlsx'}</span>
+            Current: <span className="font-semibold text-slate-700">{fileName || (selectedTopicId === 't01_vo_transactions' ? 'T01_VO_Transactions_Kotwa.xlsx' : selectedTopicId === 't01_transactions' ? 'T01_SHG_Transactions_Kotwa.xlsx' : 'S01_Member_KYC_Details_Kotwa.xlsx')}</span>
           </div>
         </div>
 
@@ -175,7 +175,37 @@ export default function FastReportGenerator({
             </span>
           </label>
 
-          {selectedTopicId === 't01_transactions' ? (
+          {selectedTopicId === 't01_vo_transactions' ? (
+            <div className="grid grid-cols-3 gap-1.5">
+              <div>
+                <span className="text-[9px] text-slate-400 block truncate">District</span>
+                <input
+                  type="text"
+                  value={reportMeta.district || 'PURBI CHAMPARAN'}
+                  onChange={(e) => setReportMeta({ ...reportMeta, district: e.target.value })}
+                  className="w-full bg-white border border-slate-300 rounded px-1.5 py-1 text-[11px] font-bold text-slate-800 focus:outline-hidden"
+                />
+              </div>
+              <div>
+                <span className="text-[9px] text-slate-400 block truncate">Block</span>
+                <input
+                  type="text"
+                  value={reportMeta.companyName?.replace(/^Block:\s*/i, '') || 'KOTWA'}
+                  onChange={(e) => setReportMeta({ ...reportMeta, companyName: `Block: ${e.target.value}` })}
+                  className="w-full bg-white border border-slate-300 rounded px-1.5 py-1 text-[11px] font-bold text-slate-800 focus:outline-hidden"
+                />
+              </div>
+              <div>
+                <span className="text-[9px] text-slate-400 block truncate">Date</span>
+                <input
+                  type="text"
+                  value={reportMeta.currentDate || '13-10-2026'}
+                  onChange={(e) => setReportMeta({ ...reportMeta, currentDate: e.target.value, dateLabel: `Date:-${e.target.value}` })}
+                  className="w-full bg-white border border-slate-300 rounded px-1.5 py-1 text-[11px] font-bold text-slate-800 focus:outline-hidden"
+                />
+              </div>
+            </div>
+          ) : selectedTopicId === 't01_transactions' ? (
             <div className="grid grid-cols-2 gap-1.5">
               <div>
                 <span className="text-[9px] text-slate-400 block truncate">District</span>

@@ -132,6 +132,92 @@ export function generateT01Columns(selectedMonths = ['September 2026', 'August 2
 }
 
 /**
+ * Detect all monthly groups present in VO column headers (e.g. "March 2026", "February 2026", "January 2026")
+ */
+export function detectVoMonths(headers = []) {
+  const months = [];
+  headers.forEach(h => {
+    const match = String(h || '').match(/^(.*?)\s*-\s*(VOs Financial-Intermediary|VOs Started Transactions|Transactions? Captured|Percentage)/i);
+    if (match) {
+      const mName = match[1].trim();
+      if (!months.includes(mName)) {
+        months.push(mName);
+      }
+    }
+  });
+  return months;
+}
+
+/**
+ * Dynamically builds column definitions for selected T01 VO months (CLF Wise)
+ */
+export function generateVoColumns(selectedMonths = ['March 2026']) {
+  const cols = [
+    {
+      id: 'col_clf',
+      header: 'CLF Name',
+      type: 'source',
+      sourceCol: 'CLF Name',
+      format: 'text',
+      summaryOp: 'none'
+    },
+    {
+      id: 'col_total_vos',
+      header: 'Total VOs',
+      type: 'source',
+      sourceCol: 'Total VOs',
+      format: 'number',
+      summaryOp: 'sum'
+    }
+  ];
+
+  selectedMonths.forEach(m => {
+    cols.push({
+      id: `col_${m.replace(/\s+/g, '_')}_fi`,
+      header: `${m} - VOs Financial-Intermediary`,
+      type: 'source',
+      sourceCol: `${m} - VOs Financial-Intermediary`,
+      format: 'number',
+      summaryOp: 'sum',
+      monthGroup: m
+    });
+    cols.push({
+      id: `col_${m.replace(/\s+/g, '_')}_started`,
+      header: `${m} - VOs Started Transactions`,
+      type: 'source',
+      sourceCol: `${m} - VOs Started Transactions`,
+      format: 'number',
+      summaryOp: 'sum',
+      monthGroup: m
+    });
+    cols.push({
+      id: `col_${m.replace(/\s+/g, '_')}_captured`,
+      header: `${m} - Transaction Captured`,
+      type: 'source',
+      sourceCol: `${m} - Transaction Captured`,
+      fallbackCol: `${m} - Transactions Captured`,
+      format: 'number',
+      summaryOp: 'sum',
+      monthGroup: m
+    });
+    cols.push({
+      id: `col_${m.replace(/\s+/g, '_')}_pct`,
+      header: `${m} - Percentage`,
+      type: 'formula',
+      formula: `([${m} - Transaction Captured] / [${m} - VOs Financial-Intermediary]) * 100`,
+      sourceCol: `${m} - Percentage`,
+      fallbackCol: `${m} - Percentage (%)`,
+      format: 'percent',
+      summaryOp: 'weighted_pct_vo',
+      cellStyle: 'vo_pct',
+      monthGroup: m
+    });
+  });
+
+  return cols;
+}
+
+/**
  * Parses date string in DD-MM-YYYY or YYYY-MM-DD
  */
 export function parseDateDDMMYYYY(str) {
@@ -242,6 +328,27 @@ export const REPORT_TOPICS = [
     defaultMonths: ['September 2026', 'August 2026'],
     description: 'Official T01 SHG Transaction Monitoring format with dynamic month toggles (remove/add Jul, Aug, Sep), auto-calculated formulas, and conditional percentage color scale.',
     columns: generateT01Columns(['September 2026', 'August 2026'])
+  },
+  {
+    id: 't01_vo_transactions',
+    topicName: 'T01 - VO Transactions Monitoring Status (Official Image Format)',
+    badge: 'Official VO Monitoring Format',
+    isPrimary: false,
+    title: 'T01 - VO Transactions Monitoring Status',
+    subtitle: 'T01 - VO Transactions Monitoring Status',
+    companyName: 'Block: KOTWA',
+    district: 'PURBI CHAMPARAN',
+    block: 'KOTWA',
+    dateLabel: 'Date:-13-10-2026',
+    currentDate: '13-10-2026',
+    theme: 'ekyc_olive',
+    layoutType: 't01_vo_grid',
+    sortByCol: 'March 2026 - Percentage',
+    sortDir: 'desc',
+    allMonths: ['March 2026', 'February 2026', 'January 2026'],
+    defaultMonths: ['March 2026'],
+    description: 'Official T01 VO Transaction Monitoring format (CLF Wise) with 3-box header (District, Block, Date), dynamic month selection (March, Feb, Jan), and color-coded percentages.',
+    columns: generateVoColumns(['March 2026'])
   },
   {
     id: 'ekyc_progress',

@@ -7,7 +7,7 @@ import ReportViewer from './components/ReportViewer';
 import SplitView from './components/SplitView';
 import { SAMPLE_DATASETS } from './utils/sampleData';
 import { parseExcelFile, parseRawText, extractSheetData, analyzeColumns } from './utils/excelReader';
-import { REPORT_TOPICS, REPORT_THEMES, detectT01Months, generateT01Columns, generateEkycColumns, getPreviousDate } from './utils/reportTemplates';
+import { REPORT_TOPICS, REPORT_THEMES, detectT01Months, detectVoMonths, generateT01Columns, generateVoColumns, generateEkycColumns, getPreviousDate } from './utils/reportTemplates';
 import { generateReportData } from './utils/formulaEngine';
 import { exportToStyledExcel, exportToCSV } from './utils/excelExporter';
 import { CheckCircle2, AlertCircle } from 'lucide-react';
@@ -48,7 +48,7 @@ export default function App() {
     }, 4000);
   };
 
-  // Toggle month for T01 report
+  // Toggle month for T01 report (SHG or VO)
   const handleToggleMonth = (monthName) => {
     if (selectedMonths.includes(monthName)) {
       if (selectedMonths.length <= 1) {
@@ -57,12 +57,20 @@ export default function App() {
       }
       const newSelected = selectedMonths.filter(m => m !== monthName);
       setSelectedMonths(newSelected);
-      setColumns(generateT01Columns(newSelected));
+      if (selectedTopicId === 't01_vo_transactions') {
+        setColumns(generateVoColumns(newSelected));
+      } else {
+        setColumns(generateT01Columns(newSelected));
+      }
       showToast(`Removed "${monthName}" from report.`);
     } else {
       const newSelected = availableMonths.filter(m => selectedMonths.includes(m) || m === monthName);
       setSelectedMonths(newSelected);
-      setColumns(generateT01Columns(newSelected));
+      if (selectedTopicId === 't01_vo_transactions') {
+        setColumns(generateVoColumns(newSelected));
+      } else {
+        setColumns(generateT01Columns(newSelected));
+      }
       showToast(`Included "${monthName}" in report.`);
     }
   };
@@ -108,10 +116,13 @@ export default function App() {
     const topic = REPORT_TOPICS.find(t => t.id === topicId) || REPORT_TOPICS[0];
     setSelectedTopicId(topic.id);
 
+    const isVo = topic.id === 't01_vo_transactions';
     const isEkyc = topic.id === 'ekyc_progress';
     const isT01 = topic.id === 't01_transactions';
 
-    const defaultDateLabel = isT01
+    const defaultDateLabel = isVo
+      ? (topic.dateLabel || 'Date:-13-10-2026')
+      : isT01
       ? (topic.dateLabel || 'Date:-10-10-2026')
       : `Date:-${reportMeta.yesterdayDate || topic.yesterdayDate || '12-10-2026'}`;
 
@@ -122,21 +133,32 @@ export default function App() {
       subtitle: topic.subtitle,
       companyName: topic.companyName || prev.companyName || 'Block: KOTWA',
       district: topic.district || prev.district || 'PURBI CHAMPARAN',
-      panchayat: topic.panchayat || prev.panchayat || 'All Panchayats',
+      panchayat: isVo ? '' : (topic.panchayat || prev.panchayat || 'All Panchayats'),
       todayDate: prev.todayDate || topic.todayDate || '13-10-2026',
       yesterdayDate: prev.yesterdayDate || topic.yesterdayDate || '12-10-2026',
       dayBeforeYesterdayDate: prev.dayBeforeYesterdayDate || topic.dayBeforeYesterdayDate || '10-10-2026',
       dateLabel: defaultDateLabel,
-      currentDate: isT01 ? (topic.currentDate || '10-10-2026') : (prev.todayDate || '13-10-2026'),
-      prevDate: isT01 ? (topic.prevDate || '10-10-2026') : (prev.yesterdayDate || '12-10-2026'),
+      currentDate: isVo ? (topic.currentDate || '13-10-2026') : isT01 ? (topic.currentDate || '10-10-2026') : (prev.todayDate || '13-10-2026'),
+      prevDate: isVo ? '10-10-2026' : isT01 ? (topic.prevDate || '10-10-2026') : (prev.yesterdayDate || '12-10-2026'),
       theme: topic.theme || 'ekyc_olive',
-      layoutType: topic.layoutType || (isT01 ? 't01_grid' : 'ekyc_grid'),
+      layoutType: topic.layoutType || (isVo ? 't01_vo_grid' : isT01 ? 't01_grid' : 'ekyc_grid'),
       sortByCol: topic.sortByCol || '',
       sortDir: topic.sortDir || 'asc',
       downloadInfo: topic.downloadInfo || prev.downloadInfo
     }));
 
-    if (isT01) {
+    if (isVo) {
+      const allM = topic.allMonths || ['March 2026', 'February 2026', 'January 2026'];
+      const defM = topic.defaultMonths || ['March 2026'];
+      setAvailableMonths(allM);
+      setSelectedMonths(defM);
+      setColumns(generateVoColumns(defM));
+
+      if (!fileInfo || !fileInfo.headers.some(h => h.includes('Total VOs') || h.includes('CLF Name'))) {
+        loadDataset('t01_vo_transactions');
+        return;
+      }
+    } else if (isT01) {
       const allM = topic.allMonths || ['September 2026', 'August 2026', 'July 2026'];
       const defM = topic.defaultMonths || ['September 2026', 'August 2026'];
       setAvailableMonths(allM);
@@ -152,13 +174,13 @@ export default function App() {
       const prevYDate = reportMeta.dayBeforeYesterdayDate || topic.dayBeforeYesterdayDate || '10-10-2026';
       setColumns(generateEkycColumns(yDate, prevYDate));
 
-      if (fileInfo && fileInfo.headers.some(h => h.includes('Total SHGs'))) {
+      if (fileInfo && fileInfo.headers.some(h => h.includes('Total SHGs') || h.includes('Total VOs'))) {
         loadDataset('ekyc');
         return;
       }
     } else {
       setColumns(topic.columns || []);
-      if (fileInfo && fileInfo.headers.some(h => h.includes('Total SHGs'))) {
+      if (fileInfo && fileInfo.headers.some(h => h.includes('Total SHGs') || h.includes('Total VOs'))) {
         loadDataset('ekyc');
         return;
       }
@@ -167,17 +189,24 @@ export default function App() {
     showToast(`Applied Topic: "${topic.topicName}"`);
   };
 
-  // Load initial dataset (Kotwa S01 dataset or T01)
+  // Load initial dataset (Kotwa S01 dataset, T01 SHG, or T01 VO)
   const loadDataset = (key = 'ekyc') => {
     const sample = SAMPLE_DATASETS[key] || SAMPLE_DATASETS.ekyc;
     const rawHeaders = Object.keys(sample.data[0] || {});
     const stats = analyzeColumns(rawHeaders, sample.data);
     const defaultTopic = REPORT_TOPICS.find(t => t.id === sample.defaultPreset) || REPORT_TOPICS[0];
 
-    const detected = detectT01Months(rawHeaders);
-    if (detected.length > 0) {
-      setAvailableMonths(detected);
-      setSelectedMonths(detected.slice(0, 2));
+    if (key === 't01_vo_transactions') {
+      const voMonths = detectVoMonths(rawHeaders);
+      const allM = voMonths.length > 0 ? voMonths : ['March 2026', 'February 2026', 'January 2026'];
+      setAvailableMonths(allM);
+      setSelectedMonths(['March 2026']);
+    } else {
+      const detected = detectT01Months(rawHeaders);
+      if (detected.length > 0) {
+        setAvailableMonths(detected);
+        setSelectedMonths(detected.slice(0, 2));
+      }
     }
 
     setFileInfo({
@@ -222,11 +251,43 @@ export default function App() {
   const applyParsedData = (parsed, displayName) => {
     setFileInfo(parsed);
 
-    // Check if uploaded data is T01
-    const isT01Data = (parsed.detectedMonths && parsed.detectedMonths.length > 0) ||
-      parsed.headers.some(h => h.includes('Total SHGs') || h.includes('Transactions Captured'));
+    // Check if uploaded data is VO transactions
+    const isVoData = parsed.metadata?.reportType === 't01_vo' ||
+      parsed.headers.some(h => h.includes('Total VOs') || h.includes('CLF Name') || h.includes('VOs Financial-Intermediary'));
 
-    if (isT01Data) {
+    // Check if uploaded data is T01 SHG
+    const isT01Data = !isVoData && ((parsed.detectedMonths && parsed.detectedMonths.length > 0) ||
+      parsed.headers.some(h => h.includes('Total SHGs') || h.includes('Transactions Captured')));
+
+    if (isVoData) {
+      const months = parsed.detectedMonths && parsed.detectedMonths.length > 0
+        ? parsed.detectedMonths
+        : detectVoMonths(parsed.headers);
+
+      const allMonths = months.length > 0 ? months : ['March 2026', 'February 2026', 'January 2026'];
+      const activeMonths = allMonths.includes('March 2026') ? ['March 2026'] : [allMonths[0]];
+      setAvailableMonths(allMonths);
+      setSelectedMonths(activeMonths);
+      setSelectedTopicId('t01_vo_transactions');
+
+      setReportMeta(prev => ({
+        ...prev,
+        presetId: 't01_vo_transactions',
+        title: 'T01 - VO Transactions Monitoring Status',
+        district: parsed.metadata?.district || 'PURBI CHAMPARAN',
+        companyName: `Block: ${parsed.metadata?.block || 'KOTWA'}`,
+        panchayat: '',
+        dateLabel: 'Date:-13-10-2026',
+        currentDate: '13-10-2026',
+        theme: 'ekyc_olive',
+        layoutType: 't01_vo_grid',
+        sortByCol: activeMonths[0] ? `${activeMonths[0]} - Percentage` : '',
+        sortDir: 'desc',
+        downloadInfo: parsed.metadata?.downloadInfo || prev.downloadInfo
+      }));
+
+      setColumns(generateVoColumns(activeMonths));
+    } else if (isT01Data) {
       const months = parsed.detectedMonths && parsed.detectedMonths.length > 0
         ? parsed.detectedMonths
         : detectT01Months(parsed.headers);

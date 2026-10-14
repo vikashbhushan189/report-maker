@@ -220,12 +220,12 @@ export function generateReportData(
   });
 
   // 2. Handle optional Grouping & Aggregation
-  if (groupByCol && groupByCol.trim() !== '') {
+  if (typeof groupByCol === 'string' && groupByCol.trim() !== '') {
     calculatedRows = aggregateByGroup(calculatedRows, columnConfigs, groupByCol);
   }
 
   // 3. Sort rows if sort column is specified (e.g. e-KYC Gap descending)
-  if (sortByCol && sortByCol.trim() !== '') {
+  if (typeof sortByCol === 'string' && sortByCol.trim() !== '') {
     calculatedRows.sort((a, b) => {
       const valA = a[sortByCol];
       const valB = b[sortByCol];
@@ -314,16 +314,30 @@ export function generateReportData(
     }
   }
 
-  // 6. Weighted Percentage Totals for T01 Monthly Transaction Columns
+  // 6. Weighted Percentage Totals for T01 Monthly Transaction Columns (SHG & VO)
   columnConfigs.forEach(col => {
-    if (col.summaryOp === 'weighted_pct' || (col.format === 'percent' && col.header.includes('Percentage (%)'))) {
+    if (col.summaryOp === 'weighted_pct_vo' || col.cellStyle === 'vo_pct' || (col.format === 'percent' && col.header.includes('Percentage') && !col.header.includes('SHGs'))) {
+      const match = col.header.match(/^(.*?)\s*-\s*Percentage/i);
+      if (match) {
+        const monthPrefix = match[1].trim();
+        const intermediary = totals[`${monthPrefix} - VOs Financial-Intermediary`] ?? totals['Total VOs'];
+        const captured = totals[`${monthPrefix} - Transaction Captured`] ?? totals[`${monthPrefix} - Transactions Captured`];
+        if (intermediary !== undefined && intermediary !== null && Number(intermediary) > 0 && captured !== undefined && captured !== null) {
+          totals[col.header] = (Number(captured) / Number(intermediary)) * 100;
+        } else if (intermediary !== undefined && intermediary !== null && Number(intermediary) === 0) {
+          totals[col.header] = 0;
+        }
+      }
+    } else if (col.summaryOp === 'weighted_pct' || (col.format === 'percent' && col.header.includes('Percentage (%)'))) {
       const match = col.header.match(/^(.*?)\s*-\s*Percentage \(%\)/i);
       if (match) {
         const monthPrefix = match[1].trim();
         const totalSHGs = totals[`${monthPrefix} - Total SHGs`];
         const captured = totals[`${monthPrefix} - Transactions Captured`];
-        if (totalSHGs && totalSHGs > 0 && captured !== undefined) {
+        if (totalSHGs !== undefined && totalSHGs !== null && Number(totalSHGs) > 0 && captured !== undefined && captured !== null) {
           totals[col.header] = (Number(captured) / Number(totalSHGs)) * 100;
+        } else if (totalSHGs !== undefined && totalSHGs !== null && Number(totalSHGs) === 0) {
+          totals[col.header] = 0;
         }
       }
     }
@@ -332,6 +346,51 @@ export function generateReportData(
   return {
     rows: calculatedRows,
     totals
+  };
+}
+
+/**
+ * Returns the exact color palette for VO Transaction Percentage cells
+ * 100% -> Rich Green (#86efac)
+ * 90-99.9% -> Soft Yellow (#fef08a)
+ * 50-89.9% -> Light Orange (#fed7aa)
+ * <50% -> Soft Red (#fca5a5)
+ * 0% -> Red (#f87171)
+ */
+export function getVoPctColor(val) {
+  const num = typeof val === 'number' ? val : Number(String(val).replace(/[%,]/g, '').trim());
+  if (isNaN(num) || num <= 0.0001) {
+    return {
+      bg: 'bg-[#f87171]',
+      text: 'text-white font-bold',
+      excelArgb: 'FFF87171'
+    };
+  }
+  if (num >= 99.99) {
+    return {
+      bg: 'bg-[#86efac]',
+      text: 'text-emerald-950 font-bold',
+      excelArgb: 'FF86EFAC'
+    };
+  }
+  if (num >= 90.0) {
+    return {
+      bg: 'bg-[#fef08a]',
+      text: 'text-amber-950 font-bold',
+      excelArgb: 'FFFEF08A'
+    };
+  }
+  if (num >= 50.0) {
+    return {
+      bg: 'bg-[#fed7aa]',
+      text: 'text-amber-900 font-semibold',
+      excelArgb: 'FFFED7AA'
+    };
+  }
+  return {
+    bg: 'bg-[#fca5a5]',
+    text: 'text-red-950 font-semibold',
+    excelArgb: 'FFFCA5A5'
   };
 }
 

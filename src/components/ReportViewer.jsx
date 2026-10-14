@@ -16,7 +16,7 @@ import {
   Edit3,
   ArrowUpDown
 } from 'lucide-react';
-import { formatValue, getT01PctColor } from '../utils/formulaEngine';
+import { formatValue, getT01PctColor, getVoPctColor } from '../utils/formulaEngine';
 import { REPORT_THEMES } from '../utils/reportTemplates';
 import ManualDataModal from './ManualDataModal';
 
@@ -38,8 +38,9 @@ export default function ReportViewer({
   const [showManualModal, setShowManualModal] = useState(false);
 
   const theme = REPORT_THEMES[reportMeta.theme] || REPORT_THEMES.ekyc_olive;
-  const isT01 = reportMeta.presetId === 't01_transactions' || reportMeta.layoutType === 't01_grid';
-  const isEkyc = !isT01 && (reportMeta.presetId === 'ekyc_progress' || reportMeta.layoutType === 'ekyc_grid');
+  const isVo = reportMeta.presetId === 't01_vo_transactions' || reportMeta.layoutType === 't01_vo_grid';
+  const isT01 = !isVo && (reportMeta.presetId === 't01_transactions' || reportMeta.layoutType === 't01_grid');
+  const isEkyc = !isVo && !isT01 && (reportMeta.presetId === 'ekyc_progress' || reportMeta.layoutType === 'ekyc_grid');
 
   const [sortCol, setSortCol] = useState(reportMeta.sortByCol || '');
   const [sortDir, setSortDir] = useState(reportMeta.sortDir || 'asc');
@@ -216,7 +217,29 @@ export default function ReportViewer({
 
       {/* 2. Official Report Container (Exact image replica) */}
       <div className="bg-white border-2 border-slate-300 shadow-lg rounded-xl overflow-hidden">
-        {isT01 ? (
+        {isVo ? (
+          <div>
+            {/* VO Top Title: Red Centered on Gray/Beige Background */}
+            <div className="py-2.5 px-4 text-center border-b border-slate-300 bg-slate-200">
+              <h1 className="text-base sm:text-lg font-bold text-[#c00000] tracking-wide uppercase">
+                {reportMeta.title || 'T01 - VO Transactions Monitoring Status'}
+              </h1>
+            </div>
+
+            {/* VO 3-Box Subheader Row: District, Block, Date */}
+            <div className="grid grid-cols-1 md:grid-cols-3 border-b-2 border-slate-400 bg-slate-50 text-xs font-bold text-[#c00000]">
+              <div className="py-2 px-3 text-center border-b md:border-b-0 border-r border-slate-300 flex items-center justify-center">
+                <span>District: {reportMeta.district || 'PURBI CHAMPARAN'}</span>
+              </div>
+              <div className="py-2 px-3 text-center border-b md:border-b-0 md:border-r border-slate-300 flex items-center justify-center">
+                <span>Block: {reportMeta.companyName?.replace(/^Block:\s*/i, '').trim() || 'KOTWA'}</span>
+              </div>
+              <div className="py-2 px-3 text-center flex items-center justify-center">
+                <span>Date:-{reportMeta.currentDate || '13-10-2026'}</span>
+              </div>
+            </div>
+          </div>
+        ) : isT01 ? (
           <div>
             {/* T01 Top Title: Red Centered on Gray/Beige Background */}
             <div className="py-2.5 px-4 text-center border-b border-slate-300 bg-slate-200">
@@ -377,7 +400,10 @@ export default function ReportViewer({
                         // Check special cell styles as in the image
                         let cellClass = 'border border-slate-300 py-1.5 px-2 whitespace-nowrap ';
 
-                        if (col.cellStyle === 't01_pct' || col.header.includes('Percentage (%)')) {
+                        if (col.cellStyle === 'vo_pct' || (isVo && col.header.includes('Percentage'))) {
+                          const colorMeta = getVoPctColor(rawVal);
+                          cellClass += `${colorMeta.bg} ${colorMeta.text} text-right `;
+                        } else if (col.cellStyle === 't01_pct' || col.header.includes('Percentage (%)')) {
                           const colorMeta = getT01PctColor(rawVal);
                           cellClass += `${colorMeta.bg} ${colorMeta.text} text-right `;
                         } else if (col.cellStyle === 'green_highlight') {
@@ -416,8 +442,8 @@ export default function ReportViewer({
             {/* Total Row: Bold Red Text as in Image */}
             {totals && rows.length > 0 && (
               <tfoot className="sticky bottom-0 z-10">
-                <tr className={`font-bold border-t-2 border-slate-400 border-b-2 border-slate-400 text-[#c00000] ${
-                  isT01 ? 'bg-red-50/90' : 'bg-white'
+                <tr className={`font-bold border-t-2 border-slate-400 border-b-2 border-slate-400 ${
+                  isVo || isT01 ? 'bg-rose-100/80 text-slate-900' : 'bg-white text-[#c00000]'
                 }`}>
                   <td className="py-2 px-2 text-center border border-slate-300">
                     —
