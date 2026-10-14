@@ -1,19 +1,36 @@
 import ExcelJS from 'exceljs';
-import { REPORT_THEMES } from './reportTemplates';
+import { REPORT_THEMES } from './reportTemplates.js';
+import { getT01PctColor } from './formulaEngine.js';
+
+/**
+ * Convert 1-indexed column number to Excel column letter (1 -> 'A', 2 -> 'B', etc.)
+ */
+function getColLetter(colIdx) {
+  let letter = '';
+  let temp = colIdx;
+  while (temp > 0) {
+    const rem = (temp - 1) % 26;
+    letter = String.fromCharCode(65 + rem) + letter;
+    temp = Math.floor((temp - 1) / 26);
+  }
+  return letter;
+}
 
 /**
  * Generates and downloads a professionally styled Excel (.xlsx) report
- * exactly matching the layout, colors, and headers in the official report image.
+ * exactly matching the layout, colors, and headers in the official report image,
+ * with live Excel formulas for all percentages, totals, and calculations.
  */
 export async function exportToStyledExcel({
   reportMeta,
   columns,
   rows,
   totals,
-  filename = 'eKYC_Progress_Report.xlsx'
+  filename = 'Report.xlsx'
 }) {
   const theme = REPORT_THEMES[reportMeta.theme] || REPORT_THEMES.ekyc_olive;
-  const isEkyc = reportMeta.presetId === 'ekyc_progress' || reportMeta.layoutType === 'ekyc_grid';
+  const isT01 = reportMeta.presetId === 't01_transactions' || reportMeta.layoutType === 't01_grid';
+  const isEkyc = !isT01 && (reportMeta.presetId === 'ekyc_progress' || reportMeta.layoutType === 'ekyc_grid');
 
   const workbook = new ExcelJS.Workbook();
   workbook.creator = 'Report Studio';
@@ -21,7 +38,8 @@ export async function exportToStyledExcel({
   workbook.created = new Date();
   workbook.modified = new Date();
 
-  const sheet = workbook.addWorksheet('KYC Progress Report', {
+  const sheetName = isT01 ? 'SHG Transactions Report' : (isEkyc ? 'KYC Progress Report' : 'Report');
+  const sheet = workbook.addWorksheet(sheetName, {
     views: [{ showGridLines: true }],
     pageSetup: { orientation: 'landscape', fitToPage: true, fitToWidth: 1 }
   });
@@ -37,20 +55,96 @@ export async function exportToStyledExcel({
   let currentRowIdx = 1;
   const totalColsCount = columns.length + 1; // +1 for S.No
 
-  if (isEkyc) {
-    // 1. Top Title: Red Bold Centered ("S01 - Member KYC Details")
+  // Build a map of column header -> Excel column letter
+  // Col 1 is 'A' (S.No)
+  // Col 2 is 'B' (Gram Panchayat)
+  // Col 3+ are data columns
+  const colLetterMap = {};
+  columns.forEach((col, idx) => {
+    colLetterMap[col.header] = getColLetter(idx + 2);
+  });
+
+  if (isT01) {
+    // ----------------------------------------------------
+    // 1. T01 HEADER: Title Banner (Row 1)
+    // ----------------------------------------------------
+    const titleRow = sheet.getRow(currentRowIdx);
+    titleRow.values = [reportMeta.title || 'T01 - SHG Transactions Monitoring Status'];
+    titleRow.height = 28;
+    titleRow.font = { name: 'Calibri', size: 14, bold: true, color: { argb: 'FFC00000' } };
+    titleRow.alignment = { vertical: 'middle', horizontal: 'center' };
+    sheet.mergeCells(currentRowIdx, 1, currentRowIdx, totalColsCount);
+
+    const titleCell = sheet.getCell(currentRowIdx, 1);
+    titleCell.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFE2E8F0' } // Light gray background
+    };
+    for (let c = 1; c <= totalColsCount; c++) {
+      sheet.getCell(currentRowIdx, c).border = borderThin;
+    }
+    currentRowIdx++;
+
+    // ----------------------------------------------------
+    // 2. T01 SUBHEADER: 4-Box Row (District, Block, Panchayat, Date)
+    // ----------------------------------------------------
+    const subheaderRow = sheet.getRow(currentRowIdx);
+    subheaderRow.height = 24;
+
+    const districtText = `District: ${reportMeta.district || 'PURBI CHAMPARAN'}`;
+    const blockText = `Block: ${reportMeta.companyName?.replace(/^Block:\s*/i, '').trim() || 'KOTWA'}`;
+    const panchayatText = `Panchayat: ${reportMeta.panchayat || 'All Panchayats'}`;
+    const dateText = `Date:-${reportMeta.currentDate || '10-10-2026'}`;
+
+    // Split totalColsCount nicely into 4 segments
+    const b1End = Math.max(2, Math.floor(totalColsCount * 0.25));
+    const b2End = Math.max(b1End + 1, Math.floor(totalColsCount * 0.50));
+    const b3End = Math.max(b2End + 1, Math.floor(totalColsCount * 0.75));
+    const b4End = totalColsCount;
+
+    sheet.mergeCells(currentRowIdx, 1, currentRowIdx, b1End);
+    sheet.mergeCells(currentRowIdx, b1End + 1, currentRowIdx, b2End);
+    sheet.mergeCells(currentRowIdx, b2End + 1, currentRowIdx, b3End);
+    sheet.mergeCells(currentRowIdx, b3End + 1, currentRowIdx, b4End);
+
+    const formatSubBox = (colStart, text) => {
+      const cell = sheet.getCell(currentRowIdx, colStart);
+      cell.value = text;
+      cell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FFC00000' } };
+      cell.alignment = { vertical: 'middle', horizontal: 'center' };
+    };
+
+    formatSubBox(1, districtText);
+    formatSubBox(b1End + 1, blockText);
+    formatSubBox(b2End + 1, panchayatText);
+    formatSubBox(b3End + 1, dateText);
+
+    for (let c = 1; c <= totalColsCount; c++) {
+      const cell = sheet.getCell(currentRowIdx, c);
+      cell.border = borderThin;
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFF8FAFC' }
+      };
+    }
+    currentRowIdx++;
+  } else if (isEkyc) {
+    // ----------------------------------------------------
+    // S01 HEADER: 3-Box Subheader Row
+    // ----------------------------------------------------
     const titleRow = sheet.getRow(currentRowIdx);
     titleRow.values = [reportMeta.title || 'S01 - Member KYC Details'];
     titleRow.height = 28;
     titleRow.font = { name: 'Calibri', size: 14, bold: true, color: { argb: 'FFC00000' } };
     titleRow.alignment = { vertical: 'middle', horizontal: 'center' };
     sheet.mergeCells(currentRowIdx, 1, currentRowIdx, totalColsCount);
+    for (let c = 1; c <= totalColsCount; c++) {
+      sheet.getCell(currentRowIdx, c).border = borderThin;
+    }
     currentRowIdx++;
 
-    // 2. 3-Box Subheader Row as in the image:
-    // Box 1 (Cols 1-4): Block: KOTWA
-    // Box 2 (Cols 5-13): S01 - Member KYC Details Panchayat: All Panchayats
-    // Box 3 (Cols 14-17): Date:-12-10-2026
     const subheaderRow = sheet.getRow(currentRowIdx);
     subheaderRow.height = 24;
 
@@ -80,13 +174,12 @@ export async function exportToStyledExcel({
     cell3.font = { name: 'Calibri', size: 11, bold: true, color: { argb: 'FFC00000' } };
     cell3.alignment = { vertical: 'middle', horizontal: 'center' };
 
-    // Apply borders to subheader cells
     for (let c = 1; c <= totalColsCount; c++) {
       sheet.getCell(currentRowIdx, c).border = borderThin;
     }
     currentRowIdx++;
   } else {
-    // Standard banner for other templates
+    // Generic Header
     const titleRow = sheet.getRow(currentRowIdx);
     titleRow.values = [reportMeta.companyName || 'Enterprise Report'];
     titleRow.font = { name: 'Segoe UI', size: 13, bold: true, color: { argb: 'FF1E293B' } };
@@ -98,14 +191,15 @@ export async function exportToStyledExcel({
     titleRow2.font = { name: 'Segoe UI', size: 16, bold: true, color: { argb: 'FF1E293B' } };
     sheet.mergeCells(currentRowIdx, 1, currentRowIdx, totalColsCount);
     currentRowIdx++;
-
-    currentRowIdx++; // spacer
+    currentRowIdx++;
   }
 
-  // 3. Table Column Header Row: Olive Green Background (#C5D9A4)
+  // ----------------------------------------------------
+  // 3. Table Column Header Row: Olive Green (#C5D9A4)
+  // ----------------------------------------------------
   const headerRowIdx = currentRowIdx;
   const headerRow = sheet.getRow(headerRowIdx);
-  headerRow.values = ['S.No', ...columns.map(col => col.header)];
+  headerRow.values = ['S.NO', ...columns.map(col => col.header)];
   headerRow.height = 36;
 
   const headerBgArgb = hexToArgb(theme.primaryColor || '#c5d9a4');
@@ -133,86 +227,199 @@ export async function exportToStyledExcel({
 
   const firstDataRowIdx = currentRowIdx;
 
-  // 4. Data Rows
+  // ----------------------------------------------------
+  // 4. Data Rows with Live Formulas
+  // ----------------------------------------------------
   rows.forEach((row, rowIdx) => {
     const dataRow = sheet.getRow(currentRowIdx);
     dataRow.height = 20;
 
-    const rowValues = [
-      rowIdx + 1, // S.No
-      ...columns.map(col => {
-        const val = row[col.header];
-        if (val === null || val === undefined || val === '') return '';
-        const num = typeof val === 'number' ? val : Number(String(val).replace(/[$,%]/g, '').trim());
-        if (col.format === 'percent' && !isNaN(num)) {
-          return num / 100; // in Excel, 95.08% is 0.9508
+    // Set S.NO in Column 1
+    const snoCell = sheet.getCell(currentRowIdx, 1);
+    snoCell.value = rowIdx + 1;
+    snoCell.alignment = { vertical: 'middle', horizontal: 'center' };
+    snoCell.border = borderThin;
+    snoCell.font = { name: 'Calibri', size: 10, color: { argb: 'FF000000' } };
+
+    columns.forEach((col, cIdx) => {
+      const colCell = sheet.getCell(currentRowIdx, cIdx + 2);
+      colCell.border = borderThin;
+      colCell.font = { name: 'Calibri', size: 10, color: { argb: 'FF000000' } };
+
+      const rawVal = row[col.header];
+      const numVal = typeof rawVal === 'number' ? rawVal : Number(String(rawVal || '').replace(/[$,%]/g, '').trim());
+
+      // --------------------------------------------------
+      // FORMULA INJECTION FOR T01 (SHG Transactions)
+      // --------------------------------------------------
+      if (isT01 && col.header.includes('Percentage (%)')) {
+        const match = col.header.match(/^(.*?)\s*-\s*Percentage \(%\)/i);
+        if (match) {
+          const monthPrefix = match[1].trim();
+          const letterTotal = colLetterMap[`${monthPrefix} - Total SHGs`];
+          const letterCaptured = colLetterMap[`${monthPrefix} - Transactions Captured`];
+
+          if (letterTotal && letterCaptured) {
+            // Live Excel Formula: =IF(C5>0, E5/C5, 0)
+            colCell.value = {
+              formula: `IF(${letterTotal}${currentRowIdx}>0, ${letterCaptured}${currentRowIdx}/${letterTotal}${currentRowIdx}, 0)`,
+              result: isNaN(numVal) ? 0 : numVal / 100
+            };
+          } else {
+            colCell.value = isNaN(numVal) ? 0 : numVal / 100;
+          }
+        } else {
+          colCell.value = isNaN(numVal) ? 0 : numVal / 100;
         }
-        if (col.format !== 'text' && !isNaN(num) && typeof val !== 'boolean') {
-          return num;
-        }
-        return val;
-      })
-    ];
 
-    dataRow.values = rowValues;
+        colCell.numFmt = '0.00%';
+        colCell.alignment = { vertical: 'middle', horizontal: 'right' };
 
-    dataRow.eachCell((cell, colIdx) => {
-      cell.border = borderThin;
-      cell.font = { name: 'Calibri', size: 10, color: { argb: 'FF000000' } };
-
-      if (colIdx === 1) {
-        // S.No
-        cell.alignment = { vertical: 'middle', horizontal: 'center' };
+        // Conditional Fill Color
+        const colorMeta = getT01PctColor(numVal);
+        colCell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: colorMeta.excelArgb }
+        };
         return;
       }
 
-      const col = columns[colIdx - 2];
-      if (!col) return;
+      // --------------------------------------------------
+      // FORMULA INJECTION FOR S01 (Member KYC Details)
+      // --------------------------------------------------
+      if (isEkyc) {
+        const colTotalMembers = colLetterMap['No. of Members *'];
+        const colAadhar = colLetterMap['With Aadhar'];
+        const colEkycCurr = colLetterMap['With e-KYC Adhaar 12-10-2026'] || colLetterMap['With e-KYC Adhaar'];
+        const colEkycPrev = colLetterMap['With e-KYC Adhaar 10-10-2026'] || colLetterMap['With e-KYC Adhaar Prev'];
+        const colMobile = colLetterMap['With Mobile No.'];
+        const colMobVer = colLetterMap['With Mobile No. Verified'];
 
-      // Special cell highlight fills as in image
-      if (col.cellStyle === 'green_highlight') {
-        cell.fill = {
-          type: 'pattern',
-          pattern: 'solid',
-          fgColor: { argb: 'FF86EFAC' } // Soft light green
-        };
-      } else if (col.cellStyle === 'red_highlight') {
-        cell.fill = {
-          type: 'pattern',
-          pattern: 'solid',
-          fgColor: { argb: 'FFF87171' } // Soft coral red
-        };
-      } else if (col.cellStyle === 'progress_badge') {
-        const numVal = Number(cell.value);
-        let progBg = 'FFFDE047'; // yellow default
-        if (numVal >= 10) progBg = 'FF4ADE80';
-        else if (numVal >= 4) progBg = 'FF86EFAC';
-        else if (numVal <= 0) progBg = numVal < 0 ? 'FFF87171' : 'FFFED7AA';
+        if (col.header === '% With Aadhar' && colTotalMembers && colAadhar) {
+          colCell.value = {
+            formula: `IF(${colTotalMembers}${currentRowIdx}>0, ${colAadhar}${currentRowIdx}/${colTotalMembers}${currentRowIdx}, 0)`,
+            result: isNaN(numVal) ? 0 : numVal / 100
+          };
+          colCell.numFmt = '0.00%';
+          colCell.alignment = { vertical: 'middle', horizontal: 'right' };
+          return;
+        }
 
-        cell.fill = {
-          type: 'pattern',
-          pattern: 'solid',
-          fgColor: { argb: progBg }
-        };
-        cell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FF000000' } };
-        cell.alignment = { vertical: 'middle', horizontal: 'center' };
+        if (col.header === '% With e-KYC Adhaar' && colTotalMembers && colEkycCurr) {
+          colCell.value = {
+            formula: `IF(${colTotalMembers}${currentRowIdx}>0, ${colEkycCurr}${currentRowIdx}/${colTotalMembers}${currentRowIdx}, 0)`,
+            result: isNaN(numVal) ? 0 : numVal / 100
+          };
+          colCell.numFmt = '0.00%';
+          colCell.alignment = { vertical: 'middle', horizontal: 'right' };
+          return;
+        }
+
+        if (col.header === 'e-KYC Gap' && colAadhar && colEkycCurr) {
+          colCell.value = {
+            formula: `${colAadhar}${currentRowIdx}-${colEkycCurr}${currentRowIdx}`,
+            result: isNaN(numVal) ? 0 : numVal
+          };
+          colCell.numFmt = '#,##0';
+          colCell.alignment = { vertical: 'middle', horizontal: 'right' };
+          colCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF87171' } };
+          return;
+        }
+
+        if (col.header === '% e-KYC Gap' && colTotalMembers && colLetterMap['e-KYC Gap']) {
+          const colGap = colLetterMap['e-KYC Gap'];
+          colCell.value = {
+            formula: `IF(${colTotalMembers}${currentRowIdx}>0, ${colGap}${currentRowIdx}/${colTotalMembers}${currentRowIdx}, 0)`,
+            result: isNaN(numVal) ? 0 : numVal / 100
+          };
+          colCell.numFmt = '0.00%';
+          colCell.alignment = { vertical: 'middle', horizontal: 'right' };
+          return;
+        }
+
+        if (col.header === 'Yesterday e-KYC Progress' && colEkycCurr && colEkycPrev) {
+          colCell.value = {
+            formula: `${colEkycCurr}${currentRowIdx}-${colEkycPrev}${currentRowIdx}`,
+            result: isNaN(numVal) ? 0 : numVal
+          };
+          colCell.numFmt = '#,##0';
+          colCell.alignment = { vertical: 'middle', horizontal: 'center' };
+          colCell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FF000000' } };
+          let progBg = 'FFFDE047';
+          if (numVal >= 10) progBg = 'FF4ADE80';
+          else if (numVal >= 4) progBg = 'FF86EFAC';
+          else if (numVal <= 0) progBg = numVal < 0 ? 'FFF87171' : 'FFFED7AA';
+          colCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: progBg } };
+          return;
+        }
+
+        if (col.header === '% With Mobile No.' && colTotalMembers && colMobile) {
+          colCell.value = {
+            formula: `IF(${colTotalMembers}${currentRowIdx}>0, ${colMobile}${currentRowIdx}/${colTotalMembers}${currentRowIdx}, 0)`,
+            result: isNaN(numVal) ? 0 : numVal / 100
+          };
+          colCell.numFmt = '0.00%';
+          colCell.alignment = { vertical: 'middle', horizontal: 'right' };
+          return;
+        }
+
+        if (col.header === '% With Mobile No. Verified' && colMobile && colMobVer) {
+          colCell.value = {
+            formula: `IF(${colMobile}${currentRowIdx}>0, ${colMobVer}${currentRowIdx}/${colMobile}${currentRowIdx}, 0)`,
+            result: isNaN(numVal) ? 0 : numVal / 100
+          };
+          colCell.numFmt = '0.00%';
+          colCell.alignment = { vertical: 'middle', horizontal: 'right' };
+          return;
+        }
+
+        if (col.header === 'With Mobile No. Not Verified' && colMobile && colMobVer) {
+          colCell.value = {
+            formula: `${colMobile}${currentRowIdx}-${colMobVer}${currentRowIdx}`,
+            result: isNaN(numVal) ? 0 : numVal
+          };
+          colCell.numFmt = '#,##0';
+          colCell.alignment = { vertical: 'middle', horizontal: 'right' };
+          colCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF87171' } };
+          return;
+        }
+
+        if (col.header === '% With Mobile No. Not Verified' && colMobile && colLetterMap['With Mobile No. Not Verified']) {
+          const colNotVer = colLetterMap['With Mobile No. Not Verified'];
+          colCell.value = {
+            formula: `IF(${colMobile}${currentRowIdx}>0, ${colNotVer}${currentRowIdx}/${colMobile}${currentRowIdx}, 0)`,
+            result: isNaN(numVal) ? 0 : numVal / 100
+          };
+          colCell.numFmt = '0.00%';
+          colCell.alignment = { vertical: 'middle', horizontal: 'right' };
+          return;
+        }
       }
 
-      // Excel Number Formats
-      if (col.format === 'currency') {
-        cell.numFmt = '$#,##0.00;($#,##0.00);"-"';
-        cell.alignment = { vertical: 'middle', horizontal: 'right' };
-      } else if (col.format === 'percent') {
-        cell.numFmt = '0.00%';
-        cell.alignment = { vertical: 'middle', horizontal: 'right' };
-      } else if (col.format === 'number') {
-        cell.numFmt = '#,##0';
-        cell.alignment = { vertical: 'middle', horizontal: 'right' };
-      } else if (col.format === 'integer') {
-        cell.numFmt = '#,##0';
-        cell.alignment = { vertical: 'middle', horizontal: 'right' };
+      // Default Value Setting
+      if (col.format === 'percent' && !isNaN(numVal)) {
+        colCell.value = numVal / 100;
+        colCell.numFmt = '0.00%';
+        colCell.alignment = { vertical: 'middle', horizontal: 'right' };
+      } else if (col.format === 'number' || col.format === 'integer') {
+        colCell.value = isNaN(numVal) ? (rawVal || '') : numVal;
+        colCell.numFmt = '#,##0';
+        colCell.alignment = { vertical: 'middle', horizontal: 'right' };
+      } else if (col.format === 'currency') {
+        colCell.value = isNaN(numVal) ? (rawVal || '') : numVal;
+        colCell.numFmt = '$#,##0.00';
+        colCell.alignment = { vertical: 'middle', horizontal: 'right' };
       } else {
-        cell.alignment = { vertical: 'middle', horizontal: 'left' };
+        colCell.value = rawVal || '';
+        colCell.alignment = { vertical: 'middle', horizontal: 'left' };
+      }
+
+      // Highlights for S01
+      if (col.cellStyle === 'green_highlight') {
+        colCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF86EFAC' } };
+      } else if (col.cellStyle === 'red_highlight') {
+        colCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF87171' } };
       }
     });
 
@@ -221,72 +428,261 @@ export async function exportToStyledExcel({
 
   const lastDataRowIdx = currentRowIdx - 1;
 
-  // 5. Total Row: Bold Red Text as in Image
+  // ----------------------------------------------------
+  // 5. Total Row: Bold Red Text & Formulas as in Image
+  // ----------------------------------------------------
   if (totals && rows.length > 0) {
-    const totalRow = sheet.getRow(currentRowIdx);
+    const totalRowIdx = currentRowIdx;
+    const totalRow = sheet.getRow(totalRowIdx);
     totalRow.height = 24;
 
-    const totalValues = [
-      '', // S.No blank or dash
-      ...columns.map((col, cIdx) => {
-        if (cIdx === 0) return 'Total';
-        if (!col.summaryOp || col.summaryOp === 'none') return '';
+    // S.NO empty in total row
+    const totalSnoCell = sheet.getCell(totalRowIdx, 1);
+    totalSnoCell.value = '';
+    totalSnoCell.border = {
+      top: { style: 'thin', color: { argb: 'FF94A3B8' } },
+      bottom: { style: 'double', color: { argb: 'FFC00000' } },
+      left: { style: 'thin', color: { argb: 'FF94A3B8' } },
+      right: { style: 'thin', color: { argb: 'FF94A3B8' } }
+    };
 
-        const val = totals[col.header];
-        if (val === null || val === undefined || val === '') return '';
+    columns.forEach((col, cIdx) => {
+      const colCell = sheet.getCell(totalRowIdx, cIdx + 2);
+      const colLetter = getColLetter(cIdx + 2);
 
-        if (col.format === 'percent') {
-          const num = typeof val === 'number' ? val : Number(String(val).replace(/[%,]/g, '').trim());
-          return isNaN(num) ? '' : num / 100;
-        }
-
-        const num = typeof val === 'number' ? val : Number(String(val).replace(/[$,%]/g, '').trim());
-        return isNaN(num) ? val : num;
-      })
-    ];
-
-    totalRow.values = totalValues;
-
-    totalRow.eachCell((cell, colIdx) => {
-      // Bold Red Font as in Image
-      cell.font = {
+      colCell.font = {
         name: 'Calibri',
         size: 11,
         bold: true,
-        color: { argb: 'FFC00000' } // Exact red from image
+        color: { argb: 'FFC00000' } // Bold Red Font as in Image
       };
 
-      cell.border = {
+      colCell.border = {
         top: { style: 'thin', color: { argb: 'FF94A3B8' } },
         bottom: { style: 'double', color: { argb: 'FFC00000' } },
         left: { style: 'thin', color: { argb: 'FF94A3B8' } },
         right: { style: 'thin', color: { argb: 'FF94A3B8' } }
       };
 
-      if (colIdx === 1) {
-        cell.alignment = { vertical: 'middle', horizontal: 'center' };
+      if (isT01) {
+        // Pinkish tint for T01 total row
+        colCell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FFFEE2E2' }
+        };
+      }
+
+      if (cIdx === 0) {
+        colCell.value = 'Total';
+        colCell.alignment = { vertical: 'middle', horizontal: 'center' };
         return;
       }
 
-      const col = columns[colIdx - 2];
-      if (col) {
-        if (col.format === 'percent') {
-          cell.numFmt = '0.00%';
-          cell.alignment = { vertical: 'middle', horizontal: 'right' };
-        } else if (col.format === 'number' || col.format === 'integer') {
-          cell.numFmt = '#,##0';
-          cell.alignment = { vertical: 'middle', horizontal: 'right' };
-        } else if (colIdx === 2) {
-          cell.alignment = { vertical: 'middle', horizontal: 'center' };
-        } else {
-          cell.alignment = { vertical: 'middle', horizontal: 'left' };
+      if (!col.summaryOp || col.summaryOp === 'none') {
+        colCell.value = '';
+        return;
+      }
+
+      const totalVal = totals[col.header];
+      const numTotal = typeof totalVal === 'number' ? totalVal : Number(String(totalVal || '').replace(/[$,%]/g, '').trim());
+
+      // --------------------------------------------------
+      // TOTAL FORMULAS FOR T01 (SHG Transactions)
+      // --------------------------------------------------
+      if (isT01) {
+        if (col.header.includes('Percentage (%)')) {
+          const match = col.header.match(/^(.*?)\s*-\s*Percentage \(%\)/i);
+          if (match) {
+            const monthPrefix = match[1].trim();
+            const letterTotal = colLetterMap[`${monthPrefix} - Total SHGs`];
+            const letterCaptured = colLetterMap[`${monthPrefix} - Transactions Captured`];
+            if (letterTotal && letterCaptured) {
+              // Weighted Percentage Formula: =IF(C21>0, E21/C21, 0)
+              colCell.value = {
+                formula: `IF(${letterTotal}${totalRowIdx}>0, ${letterCaptured}${totalRowIdx}/${letterTotal}${totalRowIdx}, 0)`,
+                result: isNaN(numTotal) ? 0 : numTotal / 100
+              };
+            } else {
+              colCell.value = isNaN(numTotal) ? 0 : numTotal / 100;
+            }
+          }
+          colCell.numFmt = '0.00%';
+          colCell.alignment = { vertical: 'middle', horizontal: 'right' };
+          return;
+        }
+
+        // Sum formula for counts
+        colCell.value = {
+          formula: `SUM(${colLetter}${firstDataRowIdx}:${colLetter}${lastDataRowIdx})`,
+          result: isNaN(numTotal) ? 0 : numTotal
+        };
+        colCell.numFmt = '#,##0';
+        colCell.alignment = { vertical: 'middle', horizontal: 'right' };
+        return;
+      }
+
+      // --------------------------------------------------
+      // TOTAL FORMULAS FOR S01 (Member KYC Details)
+      // --------------------------------------------------
+      if (isEkyc) {
+        const colTotalMembers = colLetterMap['No. of Members *'];
+        const colAadhar = colLetterMap['With Aadhar'];
+        const colEkycCurr = colLetterMap['With e-KYC Adhaar 12-10-2026'] || colLetterMap['With e-KYC Adhaar'];
+        const colMobile = colLetterMap['With Mobile No.'];
+        const colMobVer = colLetterMap['With Mobile No. Verified'];
+
+        if (col.header === '% With Aadhar' && colTotalMembers && colAadhar) {
+          colCell.value = {
+            formula: `IF(${colTotalMembers}${totalRowIdx}>0, ${colAadhar}${totalRowIdx}/${colTotalMembers}${totalRowIdx}, 0)`,
+            result: isNaN(numTotal) ? 0 : numTotal / 100
+          };
+          colCell.numFmt = '0.00%';
+          colCell.alignment = { vertical: 'middle', horizontal: 'right' };
+          return;
+        }
+
+        if (col.header === '% With e-KYC Adhaar' && colTotalMembers && colEkycCurr) {
+          colCell.value = {
+            formula: `IF(${colTotalMembers}${totalRowIdx}>0, ${colEkycCurr}${totalRowIdx}/${colTotalMembers}${totalRowIdx}, 0)`,
+            result: isNaN(numTotal) ? 0 : numTotal / 100
+          };
+          colCell.numFmt = '0.00%';
+          colCell.alignment = { vertical: 'middle', horizontal: 'right' };
+          return;
+        }
+
+        if (col.header === '% e-KYC Gap' && colTotalMembers && colLetterMap['e-KYC Gap']) {
+          const colGap = colLetterMap['e-KYC Gap'];
+          colCell.value = {
+            formula: `IF(${colTotalMembers}${totalRowIdx}>0, ${colGap}${totalRowIdx}/${colTotalMembers}${totalRowIdx}, 0)`,
+            result: isNaN(numTotal) ? 0 : numTotal / 100
+          };
+          colCell.numFmt = '0.00%';
+          colCell.alignment = { vertical: 'middle', horizontal: 'right' };
+          return;
+        }
+
+        if (col.header === '% With Mobile No.' && colTotalMembers && colMobile) {
+          colCell.value = {
+            formula: `IF(${colTotalMembers}${totalRowIdx}>0, ${colMobile}${totalRowIdx}/${colTotalMembers}${totalRowIdx}, 0)`,
+            result: isNaN(numTotal) ? 0 : numTotal / 100
+          };
+          colCell.numFmt = '0.00%';
+          colCell.alignment = { vertical: 'middle', horizontal: 'right' };
+          return;
+        }
+
+        if (col.header === '% With Mobile No. Verified' && colMobile && colMobVer) {
+          colCell.value = {
+            formula: `IF(${colMobile}${totalRowIdx}>0, ${colMobVer}${totalRowIdx}/${colMobile}${totalRowIdx}, 0)`,
+            result: isNaN(numTotal) ? 0 : numTotal / 100
+          };
+          colCell.numFmt = '0.00%';
+          colCell.alignment = { vertical: 'middle', horizontal: 'right' };
+          return;
+        }
+
+        if (col.header === '% With Mobile No. Not Verified' && colMobile && colLetterMap['With Mobile No. Not Verified']) {
+          const colNotVer = colLetterMap['With Mobile No. Not Verified'];
+          colCell.value = {
+            formula: `IF(${colMobile}${totalRowIdx}>0, ${colNotVer}${totalRowIdx}/${colMobile}${totalRowIdx}, 0)`,
+            result: isNaN(numTotal) ? 0 : numTotal / 100
+          };
+          colCell.numFmt = '0.00%';
+          colCell.alignment = { vertical: 'middle', horizontal: 'right' };
+          return;
+        }
+
+        // Generic Sum for S01
+        colCell.value = {
+          formula: `SUM(${colLetter}${firstDataRowIdx}:${colLetter}${lastDataRowIdx})`,
+          result: isNaN(numTotal) ? 0 : numTotal
+        };
+        colCell.numFmt = col.format === 'percent' ? '0.00%' : '#,##0';
+        colCell.alignment = { vertical: 'middle', horizontal: 'right' };
+        return;
+      }
+
+      // Default Sum
+      if (col.format === 'percent') {
+        colCell.value = isNaN(numTotal) ? '' : numTotal / 100;
+        colCell.numFmt = '0.00%';
+      } else {
+        colCell.value = {
+          formula: `SUM(${colLetter}${firstDataRowIdx}:${colLetter}${lastDataRowIdx})`,
+          result: isNaN(numTotal) ? 0 : numTotal
+        };
+        colCell.numFmt = '#,##0';
+      }
+      colCell.alignment = { vertical: 'middle', horizontal: 'right' };
+    });
+
+    currentRowIdx++;
+  }
+
+  // ----------------------------------------------------
+  // 6. Excel Conditional Formatting Rules (Dynamic Colorcoding)
+  // ----------------------------------------------------
+  if (isT01 && lastDataRowIdx >= firstDataRowIdx) {
+    columns.forEach((col, cIdx) => {
+      if (col.header.includes('Percentage (%)')) {
+        const colLetter = getColLetter(cIdx + 2);
+        try {
+          sheet.addConditionalFormatting({
+            ref: `${colLetter}${firstDataRowIdx}:${colLetter}${lastDataRowIdx}`,
+            rules: [
+              {
+                type: 'cellIs',
+                operator: 'equal',
+                formulae: ['0'],
+                style: {
+                  fill: { type: 'pattern', pattern: 'solid', bgColor: { argb: 'FFF87171' } },
+                  font: { bold: true, color: { argb: 'FFFFFFFF' } }
+                }
+              },
+              {
+                type: 'cellIs',
+                operator: 'between',
+                formulae: ['0.0001', '0.0199'],
+                style: {
+                  fill: { type: 'pattern', pattern: 'solid', bgColor: { argb: 'FFFEF08A' } },
+                  font: { color: { argb: 'FF000000' } }
+                }
+              },
+              {
+                type: 'cellIs',
+                operator: 'greaterThanOrEqual',
+                formulae: ['0.02'],
+                style: {
+                  fill: { type: 'pattern', pattern: 'solid', bgColor: { argb: 'FF86EFAC' } },
+                  font: { color: { argb: 'FF000000' } }
+                }
+              }
+            ]
+          });
+        } catch (e) {
+          // Fallback gracefully if conditional formatting fails
         }
       }
     });
   }
 
-  // 6. Auto-fit column widths
-  sheet.getColumn(1).width = 7; // S.No
+  // ----------------------------------------------------
+  // 7. Footer: User ID and Downloaded On
+  // ----------------------------------------------------
+  currentRowIdx++; // spacer
+  const footerRow = sheet.getRow(currentRowIdx);
+  const footerText = reportMeta.downloadInfo || `User ID: IBR_KOTWA & Downloaded on: ${new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })} at 11:12:08 am`;
+  footerRow.values = [footerText];
+  footerRow.font = { name: 'Calibri', size: 9, italic: true, color: { argb: 'FF64748B' } };
+  footerRow.alignment = { vertical: 'middle', horizontal: 'left' };
+  sheet.mergeCells(currentRowIdx, 1, currentRowIdx, totalColsCount);
+
+  // ----------------------------------------------------
+  // 8. Auto-fit column widths
+  // ----------------------------------------------------
+  sheet.getColumn(1).width = 7; // S.NO
   columns.forEach((col, cIdx) => {
     let maxLength = col.header.length;
     rows.forEach(r => {
@@ -299,7 +695,9 @@ export async function exportToStyledExcel({
     sheet.getColumn(cIdx + 2).width = Math.min(Math.max(maxLength + 4, 12), 35);
   });
 
-  // 7. Write to buffer and trigger browser download
+  // ----------------------------------------------------
+  // 9. Write to buffer and trigger download
+  // ----------------------------------------------------
   const buffer = await workbook.xlsx.writeBuffer();
   const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
   const url = window.URL.createObjectURL(blob);
@@ -315,8 +713,8 @@ export async function exportToStyledExcel({
 /**
  * Quick CSV Export function
  */
-export function exportToCSV({ columns, rows, filename = 'KYC_Report.csv' }) {
-  const headers = ['S.No', ...columns.map(c => `"${c.header.replace(/"/g, '""')}"`)].join(',');
+export function exportToCSV({ columns, rows, filename = 'Report.csv' }) {
+  const headers = ['S.NO', ...columns.map(c => `"${c.header.replace(/"/g, '""')}"`)].join(',');
   const rowLines = rows.map((r, idx) => {
     return [
       idx + 1,

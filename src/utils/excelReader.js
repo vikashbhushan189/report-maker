@@ -1,4 +1,5 @@
 import * as XLSX from 'xlsx';
+import { detectT01Months } from './reportTemplates.js';
 
 /**
  * Reads an Excel or CSV File object and returns parsed workbook information
@@ -32,6 +33,7 @@ export async function parseExcelFile(file) {
           headers: sheetData.headers,
           data: sheetData.data,
           metadata: sheetData.metadata,
+          detectedMonths: sheetData.detectedMonths,
           portalTotals: sheetData.portalTotals,
           totalRowIndex: sheetData.totalRowIndex,
           dataStartRowIndex: sheetData.dataStartRowIndex,
@@ -73,6 +75,7 @@ export function parseRawText(rawText) {
     headers: sheetData.headers,
     data: sheetData.data,
     metadata: sheetData.metadata,
+    detectedMonths: sheetData.detectedMonths,
     portalTotals: sheetData.portalTotals,
     totalRowIndex: sheetData.totalRowIndex,
     dataStartRowIndex: sheetData.dataStartRowIndex,
@@ -114,8 +117,12 @@ export function extractSheetData(workbook, sheetName) {
 
   for (let i = 0; i < Math.min(rawJson.length, 5); i++) {
     const rowStr = rawJson[i].map(c => String(c || '').trim()).join(' ');
-    if (rowStr.toLowerCase().includes('member kyc details')) {
+    if (rowStr.toLowerCase().includes('transactions monitoring') || rowStr.toLowerCase().includes('t01')) {
+      metadata.title = 'T01 - SHG Transactions Monitoring Status';
+      metadata.reportType = 't01';
+    } else if (rowStr.toLowerCase().includes('member kyc details')) {
       metadata.title = 'S01 - Member KYC Details';
+      metadata.reportType = 's01';
     }
     const blockMatch = rowStr.match(/block:\s*([^,\t]+)/i);
     if (blockMatch) metadata.block = blockMatch[1].trim();
@@ -247,10 +254,13 @@ export function extractSheetData(workbook, sheetName) {
     data.push(rowObj);
   }
 
+  const detectedMonths = detectT01Months(cleanHeaders);
+
   return {
     headers: cleanHeaders,
     data,
     metadata,
+    detectedMonths,
     portalTotals,
     totalRowIndex: totalRowIndex !== -1 ? totalRowIndex : 4,
     dataStartRowIndex: dataStartRowIndex !== -1 ? dataStartRowIndex : 5,

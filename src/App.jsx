@@ -7,7 +7,7 @@ import ReportViewer from './components/ReportViewer';
 import SplitView from './components/SplitView';
 import { SAMPLE_DATASETS } from './utils/sampleData';
 import { parseExcelFile, parseRawText, extractSheetData, analyzeColumns } from './utils/excelReader';
-import { REPORT_TOPICS, REPORT_THEMES } from './utils/reportTemplates';
+import { REPORT_TOPICS, REPORT_THEMES, detectT01Months, generateT01Columns } from './utils/reportTemplates';
 import { generateReportData } from './utils/formulaEngine';
 import { exportToStyledExcel, exportToCSV } from './utils/excelExporter';
 import { CheckCircle2, AlertCircle } from 'lucide-react';
@@ -29,6 +29,8 @@ export default function App() {
     groupBy: ''
   });
   const [columns, setColumns] = useState([]);
+  const [availableMonths, setAvailableMonths] = useState(['September 2026', 'August 2026', 'July 2026']);
+  const [selectedMonths, setSelectedMonths] = useState(['September 2026', 'August 2026']);
   const [isExporting, setIsExporting] = useState(false);
   const [toast, setToast] = useState(null);
 
@@ -39,35 +41,84 @@ export default function App() {
     }, 4000);
   };
 
+  // Toggle month for T01 report
+  const handleToggleMonth = (monthName) => {
+    if (selectedMonths.includes(monthName)) {
+      if (selectedMonths.length <= 1) {
+        showToast('At least one month must remain in the report.', 'error');
+        return;
+      }
+      const newSelected = selectedMonths.filter(m => m !== monthName);
+      setSelectedMonths(newSelected);
+      setColumns(generateT01Columns(newSelected));
+      showToast(`Removed "${monthName}" from report.`);
+    } else {
+      const newSelected = availableMonths.filter(m => selectedMonths.includes(m) || m === monthName);
+      setSelectedMonths(newSelected);
+      setColumns(generateT01Columns(newSelected));
+      showToast(`Included "${monthName}" in report.`);
+    }
+  };
+
   // Switch report topic
   const handleSelectTopic = (topicId) => {
     const topic = REPORT_TOPICS.find(t => t.id === topicId) || REPORT_TOPICS[0];
     setSelectedTopicId(topic.id);
+
+    const isT01 = topic.id === 't01_transactions';
 
     setReportMeta(prev => ({
       ...prev,
       presetId: topic.id,
       title: topic.title,
       subtitle: topic.subtitle,
-      companyName: prev.companyName || topic.companyName || 'Block: KOTWA',
-      dateLabel: prev.dateLabel || topic.dateLabel || 'Date:-12-10-2026',
+      companyName: topic.companyName || prev.companyName || 'Block: KOTWA',
+      district: topic.district || prev.district || 'PURBI CHAMPARAN',
+      panchayat: topic.panchayat || prev.panchayat || 'All Panchayats',
+      dateLabel: topic.dateLabel || prev.dateLabel || 'Date:-10-10-2026',
+      currentDate: topic.currentDate || prev.currentDate || '10-10-2026',
+      prevDate: topic.prevDate || prev.prevDate || '10-10-2026',
       theme: topic.theme || 'ekyc_olive',
-      layoutType: topic.layoutType || 'ekyc_grid',
+      layoutType: topic.layoutType || (isT01 ? 't01_grid' : 'ekyc_grid'),
       sortByCol: topic.sortByCol || '',
-      sortDir: topic.sortDir || 'desc'
+      sortDir: topic.sortDir || 'asc',
+      downloadInfo: topic.downloadInfo || prev.downloadInfo
     }));
 
-    setColumns(topic.columns || []);
+    if (isT01) {
+      const allM = topic.allMonths || ['September 2026', 'August 2026', 'July 2026'];
+      const defM = topic.defaultMonths || ['September 2026', 'August 2026'];
+      setAvailableMonths(allM);
+      setSelectedMonths(defM);
+      setColumns(generateT01Columns(defM));
+
+      if (!fileInfo || !fileInfo.headers.some(h => h.includes('Total SHGs'))) {
+        loadDataset('t01_transactions');
+        return;
+      }
+    } else {
+      setColumns(topic.columns || []);
+      if (fileInfo && fileInfo.headers.some(h => h.includes('Total SHGs'))) {
+        loadDataset('ekyc');
+        return;
+      }
+    }
+
     showToast(`Applied Topic: "${topic.topicName}"`);
   };
 
-  // Load initial dataset (Kotwa S01 dataset)
+  // Load initial dataset (Kotwa S01 dataset or T01)
   const loadDataset = (key = 'ekyc') => {
     const sample = SAMPLE_DATASETS[key] || SAMPLE_DATASETS.ekyc;
     const rawHeaders = Object.keys(sample.data[0] || {});
     const stats = analyzeColumns(rawHeaders, sample.data);
-
     const defaultTopic = REPORT_TOPICS.find(t => t.id === sample.defaultPreset) || REPORT_TOPICS[0];
+
+    const detected = detectT01Months(rawHeaders);
+    if (detected.length > 0) {
+      setAvailableMonths(detected);
+      setSelectedMonths(detected.slice(0, 2));
+    }
 
     setFileInfo({
       filename: sample.filename,
@@ -111,17 +162,49 @@ export default function App() {
   const applyParsedData = (parsed, displayName) => {
     setFileInfo(parsed);
 
-    // Update block name if detected in metadata
-    if (parsed.metadata?.block) {
+    // Check if uploaded data is T01
+    const isT01Data = (parsed.detectedMonths && parsed.detectedMonths.length > 0) ||
+      parsed.headers.some(h => h.includes('Total SHGs') || h.includes('Transactions Captured'));
+
+    if (isT01Data) {
+      const months = parsed.detectedMonths && parsed.detectedMonths.length > 0
+        ? parsed.detectedMonths
+        : detectT01Months(parsed.headers);
+
+      const activeMonths = months.length > 2 ? months.slice(0, 2) : months;
+      setAvailableMonths(months);
+      setSelectedMonths(activeMonths);
+      setSelectedTopicId('t01_transactions');
+
       setReportMeta(prev => ({
         ...prev,
-        companyName: `Block: ${parsed.metadata.block}`
+        presetId: 't01_transactions',
+        title: 'T01 - SHG Transactions Monitoring Status',
+        district: parsed.metadata?.district || 'PURBI CHAMPARAN',
+        companyName: `Block: ${parsed.metadata?.block || 'KOTWA'}`,
+        panchayat: parsed.metadata?.panchayat || 'All Panchayats',
+        dateLabel: 'Date:-10-10-2026',
+        currentDate: '10-10-2026',
+        theme: 'ekyc_olive',
+        layoutType: 't01_grid',
+        sortByCol: activeMonths[1] ? `${activeMonths[1]} - Percentage (%)` : `${activeMonths[0]} - Percentage (%)`,
+        sortDir: 'asc',
+        downloadInfo: parsed.metadata?.downloadInfo || prev.downloadInfo
       }));
+
+      setColumns(generateT01Columns(activeMonths));
+    } else {
+      if (parsed.metadata?.block) {
+        setReportMeta(prev => ({
+          ...prev,
+          companyName: `Block: ${parsed.metadata.block}`
+        }));
+      }
+
+      const currentTopic = REPORT_TOPICS.find(t => t.id === selectedTopicId) || REPORT_TOPICS[0];
+      setColumns(currentTopic.columns || []);
     }
 
-    // Keep current selected topic or auto-select ekyc_progress
-    const currentTopic = REPORT_TOPICS.find(t => t.id === selectedTopicId) || REPORT_TOPICS[0];
-    setColumns(currentTopic.columns || []);
     setActiveTab('report');
     showToast(`Loaded ${parsed.data.length} records from "${displayName}".`);
   };
@@ -269,6 +352,9 @@ export default function App() {
           fileName={fileInfo?.filename}
           activeTab={activeTab}
           setActiveTab={setActiveTab}
+          availableMonths={availableMonths}
+          selectedMonths={selectedMonths}
+          onToggleMonth={handleToggleMonth}
         />
 
         {/* Display Views */}

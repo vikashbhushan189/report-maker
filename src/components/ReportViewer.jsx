@@ -13,9 +13,10 @@ import {
   Sparkles,
   RefreshCw,
   CheckCircle2,
-  Edit3
+  Edit3,
+  ArrowUpDown
 } from 'lucide-react';
-import { formatValue } from '../utils/formulaEngine';
+import { formatValue, getT01PctColor } from '../utils/formulaEngine';
 import { REPORT_THEMES } from '../utils/reportTemplates';
 import ManualDataModal from './ManualDataModal';
 
@@ -37,7 +38,20 @@ export default function ReportViewer({
   const [showManualModal, setShowManualModal] = useState(false);
 
   const theme = REPORT_THEMES[reportMeta.theme] || REPORT_THEMES.ekyc_olive;
-  const isEkyc = reportMeta.presetId === 'ekyc_progress' || reportMeta.layoutType === 'ekyc_grid';
+  const isT01 = reportMeta.presetId === 't01_transactions' || reportMeta.layoutType === 't01_grid';
+  const isEkyc = !isT01 && (reportMeta.presetId === 'ekyc_progress' || reportMeta.layoutType === 'ekyc_grid');
+
+  const [sortCol, setSortCol] = useState(reportMeta.sortByCol || '');
+  const [sortDir, setSortDir] = useState(reportMeta.sortDir || 'asc');
+
+  const handleHeaderClick = (colHeader) => {
+    if (sortCol === colHeader) {
+      setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortCol(colHeader);
+      setSortDir('asc');
+    }
+  };
 
   // Search filter
   const filteredRows = useMemo(() => {
@@ -51,12 +65,32 @@ export default function ReportViewer({
     });
   }, [rows, columns, searchTerm]);
 
+  // Sort rows
+  const sortedRows = useMemo(() => {
+    let result = [...filteredRows];
+    if (sortCol) {
+      result.sort((a, b) => {
+        const valA = a[sortCol];
+        const valB = b[sortCol];
+        const numA = typeof valA === 'number' ? valA : Number(String(valA || '').replace(/[$,%]/g, '').trim());
+        const numB = typeof valB === 'number' ? valB : Number(String(valB || '').replace(/[$,%]/g, '').trim());
+        if (!isNaN(numA) && !isNaN(numB)) {
+          return sortDir === 'asc' ? numA - numB : numB - numA;
+        }
+        return sortDir === 'asc'
+          ? String(valA || '').localeCompare(String(valB || ''))
+          : String(valB || '').localeCompare(String(valA || ''));
+      });
+    }
+    return result;
+  }, [filteredRows, sortCol, sortDir]);
+
   // Pagination
-  const totalPages = Math.ceil(filteredRows.length / pageSize) || 1;
+  const totalPages = Math.ceil(sortedRows.length / pageSize) || 1;
   const paginatedRows = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
-    return filteredRows.slice(start, start + pageSize);
-  }, [filteredRows, currentPage, pageSize]);
+    return sortedRows.slice(start, start + pageSize);
+  }, [sortedRows, currentPage, pageSize]);
 
   // List of Gram Panchayats and current e-KYC map for the modal
   const { panchayatsList, currentEkycMap } = useMemo(() => {
@@ -177,18 +211,43 @@ export default function ReportViewer({
         </div>
       </div>
 
-      {/* 2. Official S01 Report Container (Exact image replica) */}
+      {/* 2. Official Report Container (Exact image replica) */}
       <div className="bg-white border-2 border-slate-300 shadow-lg rounded-xl overflow-hidden">
-        {isEkyc ? (
+        {isT01 ? (
           <div>
-            {/* Top Title: Red Centered */}
+            {/* T01 Top Title: Red Centered on Gray/Beige Background */}
+            <div className="py-2.5 px-4 text-center border-b border-slate-300 bg-slate-200">
+              <h1 className="text-base sm:text-lg font-bold text-[#c00000] tracking-wide uppercase">
+                {reportMeta.title || 'T01 - SHG Transactions Monitoring Status'}
+              </h1>
+            </div>
+
+            {/* T01 4-Box Subheader Row: District, Block, Panchayat, Date */}
+            <div className="grid grid-cols-2 md:grid-cols-4 border-b-2 border-slate-400 bg-slate-50 text-xs font-bold text-[#c00000]">
+              <div className="py-2 px-3 text-center border-b md:border-b-0 border-r border-slate-300 flex items-center justify-center">
+                <span>District: {reportMeta.district || 'PURBI CHAMPARAN'}</span>
+              </div>
+              <div className="py-2 px-3 text-center border-b md:border-b-0 md:border-r border-slate-300 flex items-center justify-center">
+                <span>Block: {reportMeta.companyName?.replace(/^Block:\s*/i, '').trim() || 'KOTWA'}</span>
+              </div>
+              <div className="py-2 px-3 text-center border-r border-slate-300 flex items-center justify-center">
+                <span>Panchayat: {reportMeta.panchayat || 'All Panchayats'}</span>
+              </div>
+              <div className="py-2 px-3 text-center flex items-center justify-center">
+                <span>Date:-{reportMeta.currentDate || '10-10-2026'}</span>
+              </div>
+            </div>
+          </div>
+        ) : isEkyc ? (
+          <div>
+            {/* S01 Top Title: Red Centered */}
             <div className="py-2.5 px-4 text-center border-b border-slate-300 bg-white">
               <h1 className="text-base sm:text-lg font-bold text-[#c00000] tracking-wide">
                 {reportMeta.title || 'S01 - Member KYC Details'}
               </h1>
             </div>
 
-            {/* 3-Part Subheader Row as in Image */}
+            {/* S01 3-Part Subheader Row as in Image */}
             <div className="grid grid-cols-1 md:grid-cols-12 border-b-2 border-slate-400 bg-white text-xs font-bold text-[#c00000]">
               <div className="md:col-span-3 py-2 px-4 text-center border-b md:border-b-0 md:border-r border-slate-300 flex items-center justify-center">
                 <span>{reportMeta.companyName || 'Block: KOTWA'}</span>
@@ -232,20 +291,28 @@ export default function ReportViewer({
                 {columns.map(col => {
                   const isRedHeader = col.headerColor === '#c00000' || col.header.includes('Gap') || col.header.includes('Not Verified');
                   const isManual = col.isManualEditable || col.type === 'manual';
+                  const isSorted = sortCol === col.header;
 
                   return (
                     <th
                       key={col.id}
-                      className={`py-2 px-2 font-bold text-center border border-slate-400 whitespace-nowrap ${
+                      onClick={() => handleHeaderClick(col.header)}
+                      className={`py-2 px-2 font-bold text-center border border-slate-400 whitespace-nowrap cursor-pointer hover:bg-black/5 select-none transition ${
                         isRedHeader ? 'text-[#c00000]' : 'text-slate-900'
                       }`}
+                      title="Click to sort by this column"
                     >
                       <div className="flex flex-col items-center justify-center leading-tight">
                         <div className="flex items-center gap-1">
                           <span>{col.header}</span>
+                          {isSorted && (
+                            <span className="text-xs text-emerald-900 font-extrabold">
+                              {sortDir === 'asc' ? '▲' : '▼'}
+                            </span>
+                          )}
                           {isManual && (
                             <button
-                              onClick={() => setShowManualModal(true)}
+                              onClick={(e) => { e.stopPropagation(); setShowManualModal(true); }}
                               className="text-amber-800 hover:text-amber-950 p-0.5 rounded hover:bg-amber-200/50"
                               title="Click to edit / paste previous day numbers"
                             >
@@ -307,7 +374,10 @@ export default function ReportViewer({
                         // Check special cell styles as in the image
                         let cellClass = 'border border-slate-300 py-1.5 px-2 whitespace-nowrap ';
 
-                        if (col.cellStyle === 'green_highlight') {
+                        if (col.cellStyle === 't01_pct' || col.header.includes('Percentage (%)')) {
+                          const colorMeta = getT01PctColor(rawVal);
+                          cellClass += `${colorMeta.bg} ${colorMeta.text} text-right `;
+                        } else if (col.cellStyle === 'green_highlight') {
                           cellClass += 'bg-[#86efac]/80 font-medium text-slate-900 text-right ';
                         } else if (col.cellStyle === 'red_highlight') {
                           cellClass += 'bg-[#f87171]/80 font-medium text-slate-900 text-right ';
@@ -342,8 +412,10 @@ export default function ReportViewer({
 
             {/* Total Row: Bold Red Text as in Image */}
             {totals && rows.length > 0 && (
-              <tfoot className="sticky bottom-0 z-10 bg-white">
-                <tr className="font-bold border-t-2 border-slate-400 border-b-2 border-slate-400 text-[#c00000]">
+              <tfoot className="sticky bottom-0 z-10">
+                <tr className={`font-bold border-t-2 border-slate-400 border-b-2 border-slate-400 text-[#c00000] ${
+                  isT01 ? 'bg-red-50/90' : 'bg-white'
+                }`}>
                   <td className="py-2 px-2 text-center border border-slate-300">
                     —
                   </td>
@@ -373,6 +445,11 @@ export default function ReportViewer({
               </tfoot>
             )}
           </table>
+        </div>
+
+        {/* Footer: User ID & Download info as in Image */}
+        <div className="px-4 py-2 text-[10px] text-slate-500 italic bg-white border-t border-slate-200">
+          {reportMeta.downloadInfo || `User ID: IBR_KOTWA & Downloaded on: ${new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })} at 11:12:08 am`}
         </div>
 
         {/* Table Pagination */}

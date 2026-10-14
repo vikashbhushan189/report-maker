@@ -55,7 +55,105 @@ export const REPORT_THEMES = {
   }
 };
 
+/**
+ * Detect all monthly groups present in column headers (e.g. "September 2026", "August 2026", "July 2026")
+ */
+export function detectT01Months(headers = []) {
+  const months = [];
+  headers.forEach(h => {
+    const match = String(h || '').match(/^(.*?)\s*-\s*(Total SHGs|SHGs Started Transactions|Transactions Captured|Percentage \(%\))/i);
+    if (match) {
+      const mName = match[1].trim();
+      if (!months.includes(mName)) {
+        months.push(mName);
+      }
+    }
+  });
+  return months;
+}
+
+/**
+ * Dynamically builds column definitions for selected T01 months
+ */
+export function generateT01Columns(selectedMonths = ['September 2026', 'August 2026']) {
+  const cols = [
+    {
+      id: 'col_gp',
+      header: 'Gram Panchayat',
+      type: 'source',
+      sourceCol: 'Gram Panchayat',
+      format: 'text',
+      summaryOp: 'none'
+    }
+  ];
+
+  selectedMonths.forEach(m => {
+    cols.push({
+      id: `col_${m.replace(/\s+/g, '_')}_total`,
+      header: `${m} - Total SHGs`,
+      type: 'source',
+      sourceCol: `${m} - Total SHGs`,
+      format: 'number',
+      summaryOp: 'sum',
+      monthGroup: m
+    });
+    cols.push({
+      id: `col_${m.replace(/\s+/g, '_')}_started`,
+      header: `${m} - SHGs Started Transactions`,
+      type: 'source',
+      sourceCol: `${m} - SHGs Started Transactions`,
+      format: 'number',
+      summaryOp: 'sum',
+      monthGroup: m
+    });
+    cols.push({
+      id: `col_${m.replace(/\s+/g, '_')}_captured`,
+      header: `${m} - Transactions Captured`,
+      type: 'source',
+      sourceCol: `${m} - Transactions Captured`,
+      format: 'number',
+      summaryOp: 'sum',
+      monthGroup: m
+    });
+    cols.push({
+      id: `col_${m.replace(/\s+/g, '_')}_pct`,
+      header: `${m} - Percentage (%)`,
+      type: 'formula',
+      formula: `([${m} - Transactions Captured] / [${m} - Total SHGs]) * 100`,
+      sourceCol: `${m} - Percentage (%)`,
+      format: 'percent',
+      summaryOp: 'weighted_pct',
+      cellStyle: 't01_pct',
+      monthGroup: m
+    });
+  });
+
+  return cols;
+}
+
 export const REPORT_TOPICS = [
+  {
+    id: 't01_transactions',
+    topicName: 'T01 - SHG Transactions Monitoring Status (Official Image Format)',
+    badge: 'Official SHG Monitoring Format',
+    isPrimary: false,
+    title: 'T01 - SHG Transactions Monitoring Status',
+    subtitle: 'T01 - SHG Transactions Monitoring Status',
+    companyName: 'Block: KOTWA',
+    district: 'PURBI CHAMPARAN',
+    block: 'KOTWA',
+    panchayat: 'All Panchayats',
+    dateLabel: 'Date:-10-10-2026',
+    currentDate: '10-10-2026',
+    theme: 'ekyc_olive',
+    layoutType: 't01_grid',
+    sortByCol: 'August 2026 - Percentage (%)',
+    sortDir: 'asc',
+    allMonths: ['September 2026', 'August 2026', 'July 2026'],
+    defaultMonths: ['September 2026', 'August 2026'],
+    description: 'Official T01 SHG Transaction Monitoring format with dynamic month toggles (remove/add Jul, Aug, Sep), auto-calculated formulas, and conditional percentage color scale.',
+    columns: generateT01Columns(['September 2026', 'August 2026'])
+  },
   {
     id: 'ekyc_progress',
     topicName: 'e-KYC Progress & Gap Ranking (Official Image Format)',

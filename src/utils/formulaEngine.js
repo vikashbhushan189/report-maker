@@ -313,9 +313,58 @@ export function generateReportData(
     }
   }
 
+  // 6. Weighted Percentage Totals for T01 Monthly Transaction Columns
+  columnConfigs.forEach(col => {
+    if (col.summaryOp === 'weighted_pct' || (col.format === 'percent' && col.header.includes('Percentage (%)'))) {
+      const match = col.header.match(/^(.*?)\s*-\s*Percentage \(%\)/i);
+      if (match) {
+        const monthPrefix = match[1].trim();
+        const totalSHGs = totals[`${monthPrefix} - Total SHGs`];
+        const captured = totals[`${monthPrefix} - Transactions Captured`];
+        if (totalSHGs && totalSHGs > 0 && captured !== undefined) {
+          totals[col.header] = (Number(captured) / Number(totalSHGs)) * 100;
+        }
+      }
+    }
+  });
+
   return {
     rows: calculatedRows,
     totals
+  };
+}
+
+/**
+ * Returns the exact color palette for T01 Transaction Percentage cells
+ * Red for 0%, Yellow for <2%, Soft Green for 2%-5%, Rich Green for >=5%
+ */
+export function getT01PctColor(val) {
+  const num = typeof val === 'number' ? val : Number(String(val).replace(/[%,]/g, '').trim());
+  if (isNaN(num) || num <= 0.0001) {
+    return {
+      bg: 'bg-[#f87171]',
+      text: 'text-white font-bold',
+      excelArgb: 'FFF87171'
+    };
+  }
+  if (num > 0 && num < 2.0) {
+    return {
+      bg: 'bg-[#fef08a]',
+      text: 'text-amber-950 font-semibold',
+      excelArgb: 'FFFEF08A'
+    };
+  }
+  if (num >= 2.0 && num < 5.0) {
+    return {
+      bg: 'bg-[#86efac]',
+      text: 'text-emerald-950 font-semibold',
+      excelArgb: 'FF86EFAC'
+    };
+  }
+  return {
+    bg: 'bg-[#4ade80]',
+    text: 'text-emerald-950 font-bold',
+    excelArgb: 'FF4ADE80'
   };
 }
 

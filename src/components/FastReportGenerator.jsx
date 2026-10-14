@@ -28,7 +28,10 @@ export default function FastReportGenerator({
   rowCount,
   fileName,
   activeTab,
-  setActiveTab
+  setActiveTab,
+  availableMonths = [],
+  selectedMonths = [],
+  onToggleMonth
 }) {
   const fileInputRef = useRef(null);
   const [showPasteModal, setShowPasteModal] = useState(false);
@@ -162,46 +165,139 @@ export default function FastReportGenerator({
           </div>
         </div>
 
-        {/* Step 3: Date & Block Details (Span 3 cols) */}
+        {/* Step 3: Date & Location Details (Span 3 cols) */}
         <div className="md:col-span-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
           <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1 flex items-center justify-between">
             <span className="flex items-center gap-1.5 text-emerald-800">
               <span className="w-4 h-4 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px] font-bold">3</span>
-              Date & Block:
+              {selectedTopicId === 't01_transactions' ? 'Header & Date:' : 'Date & Block:'}
             </span>
           </label>
 
-          <div className="grid grid-cols-3 gap-1.5">
-            <div>
-              <span className="text-[9px] text-slate-400 block truncate">Current Date</span>
-              <input
-                type="text"
-                value={reportMeta.currentDate || '12-10-2026'}
-                onChange={(e) => setReportMeta({ ...reportMeta, currentDate: e.target.value, dateLabel: `Date:-${e.target.value}` })}
-                className="w-full bg-white border border-slate-300 rounded px-1.5 py-1 text-[11px] font-bold text-slate-800 focus:outline-hidden"
-              />
+          {selectedTopicId === 't01_transactions' ? (
+            <div className="grid grid-cols-2 gap-1.5">
+              <div>
+                <span className="text-[9px] text-slate-400 block truncate">District</span>
+                <input
+                  type="text"
+                  value={reportMeta.district || 'PURBI CHAMPARAN'}
+                  onChange={(e) => setReportMeta({ ...reportMeta, district: e.target.value })}
+                  className="w-full bg-white border border-slate-300 rounded px-1.5 py-1 text-[11px] font-bold text-slate-800 focus:outline-hidden"
+                />
+              </div>
+              <div>
+                <span className="text-[9px] text-slate-400 block truncate">Block</span>
+                <input
+                  type="text"
+                  value={reportMeta.companyName?.replace(/^Block:\s*/i, '') || 'KOTWA'}
+                  onChange={(e) => setReportMeta({ ...reportMeta, companyName: `Block: ${e.target.value}` })}
+                  className="w-full bg-white border border-slate-300 rounded px-1.5 py-1 text-[11px] font-bold text-slate-800 focus:outline-hidden"
+                />
+              </div>
+              <div>
+                <span className="text-[9px] text-slate-400 block truncate">Panchayat</span>
+                <input
+                  type="text"
+                  value={reportMeta.panchayat || 'All Panchayats'}
+                  onChange={(e) => setReportMeta({ ...reportMeta, panchayat: e.target.value })}
+                  className="w-full bg-white border border-slate-300 rounded px-1.5 py-1 text-[11px] font-bold text-slate-800 focus:outline-hidden"
+                />
+              </div>
+              <div>
+                <span className="text-[9px] text-slate-400 block truncate">Date</span>
+                <input
+                  type="text"
+                  value={reportMeta.currentDate || '10-10-2026'}
+                  onChange={(e) => setReportMeta({ ...reportMeta, currentDate: e.target.value, dateLabel: `Date:-${e.target.value}` })}
+                  className="w-full bg-white border border-slate-300 rounded px-1.5 py-1 text-[11px] font-bold text-slate-800 focus:outline-hidden"
+                />
+              </div>
             </div>
-            <div>
-              <span className="text-[9px] text-slate-400 block truncate">Prev Date</span>
-              <input
-                type="text"
-                value={reportMeta.prevDate || '10-10-2026'}
-                onChange={(e) => setReportMeta({ ...reportMeta, prevDate: e.target.value })}
-                className="w-full bg-white border border-amber-300 rounded px-1.5 py-1 text-[11px] font-bold text-amber-950 focus:outline-hidden bg-amber-50/50"
-              />
+          ) : (
+            <div className="grid grid-cols-3 gap-1.5">
+              <div>
+                <span className="text-[9px] text-slate-400 block truncate">Current Date</span>
+                <input
+                  type="text"
+                  value={reportMeta.currentDate || '12-10-2026'}
+                  onChange={(e) => setReportMeta({ ...reportMeta, currentDate: e.target.value, dateLabel: `Date:-${e.target.value}` })}
+                  className="w-full bg-white border border-slate-300 rounded px-1.5 py-1 text-[11px] font-bold text-slate-800 focus:outline-hidden"
+                />
+              </div>
+              <div>
+                <span className="text-[9px] text-slate-400 block truncate">Prev Date</span>
+                <input
+                  type="text"
+                  value={reportMeta.prevDate || '10-10-2026'}
+                  onChange={(e) => setReportMeta({ ...reportMeta, prevDate: e.target.value })}
+                  className="w-full bg-white border border-amber-300 rounded px-1.5 py-1 text-[11px] font-bold text-amber-950 focus:outline-hidden bg-amber-50/50"
+                />
+              </div>
+              <div>
+                <span className="text-[9px] text-slate-400 block truncate">Block</span>
+                <input
+                  type="text"
+                  value={reportMeta.companyName || 'Block: KOTWA'}
+                  onChange={(e) => setReportMeta({ ...reportMeta, companyName: e.target.value })}
+                  className="w-full bg-white border border-slate-300 rounded px-1.5 py-1 text-[11px] font-bold text-slate-800 focus:outline-hidden"
+                />
+              </div>
             </div>
-            <div>
-              <span className="text-[9px] text-slate-400 block truncate">Block</span>
-              <input
-                type="text"
-                value={reportMeta.companyName || 'Block: KOTWA'}
-                onChange={(e) => setReportMeta({ ...reportMeta, companyName: e.target.value })}
-                className="w-full bg-white border border-slate-300 rounded px-1.5 py-1 text-[11px] font-bold text-slate-800 focus:outline-hidden"
-              />
-            </div>
-          </div>
+          )}
         </div>
       </div>
+
+      {/* Month Filter Section for T01 SHG Transaction Reports */}
+      {availableMonths && availableMonths.length > 0 && (
+        <div className="bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200/80 rounded-xl p-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xs">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0">
+              <Calendar className="w-4 h-4" />
+            </div>
+            <div>
+              <span className="text-xs font-bold text-emerald-950 block">
+                Select Report Months to Include / Exclude:
+              </span>
+              <span className="text-[10px] text-emerald-700">
+                Click any month pill below to remove or include it (e.g. Jul, Aug, Sep).
+              </span>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            {availableMonths.map(m => {
+              const isSelected = selectedMonths.includes(m);
+              return (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => onToggleMonth(m)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-xs cursor-pointer ${
+                    isSelected
+                      ? 'bg-emerald-600 text-white hover:bg-emerald-700 ring-2 ring-emerald-500/30'
+                      : 'bg-white text-slate-500 border border-slate-300 hover:border-emerald-500 hover:text-slate-800'
+                  }`}
+                  title={isSelected ? `Click to remove ${m}` : `Click to include ${m}`}
+                >
+                  {isSelected ? (
+                    <>
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-100" />
+                      <span>{m}</span>
+                      <span className="text-emerald-200 hover:text-white font-bold ml-1 text-sm leading-none">✕</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-emerald-600 font-bold">＋</span>
+                      <span className="line-through text-slate-400">{m}</span>
+                      <span className="text-[10px] font-normal text-slate-400 bg-slate-100 px-1 py-0.5 rounded">Removed</span>
+                    </>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* View Switcher Pills */}
       <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-xs">
