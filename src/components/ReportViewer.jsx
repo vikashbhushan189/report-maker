@@ -16,7 +16,7 @@ import {
   Edit3,
   ArrowUpDown
 } from 'lucide-react';
-import { formatValue, getT01PctColor, getVoPctColor, getVoYesNoColor, getLakhpatiProgressColor } from '../utils/formulaEngine';
+import { formatValue, getT01PctColor, getVoPctColor, getVoYesNoColor, getLakhpatiProgressColor, getP01HhsHeatmapColor, getP01ShgArrow } from '../utils/formulaEngine';
 import { REPORT_THEMES } from '../utils/reportTemplates';
 import ManualDataModal from './ManualDataModal';
 
@@ -38,11 +38,12 @@ export default function ReportViewer({
   const [showManualModal, setShowManualModal] = useState(false);
 
   const theme = REPORT_THEMES[reportMeta.theme] || REPORT_THEMES.ekyc_olive;
-  const isLakhpati = reportMeta.presetId === 'lakhpati_didi' || reportMeta.layoutType === 'lakhpati_grid';
-  const isVoIndividual = !isLakhpati && (reportMeta.presetId === 't01_vo_individual' || reportMeta.layoutType === 't01_vo_individual_grid');
-  const isVo = !isLakhpati && !isVoIndividual && (reportMeta.presetId === 't01_vo_transactions' || reportMeta.layoutType === 't01_vo_grid');
-  const isT01 = !isLakhpati && !isVoIndividual && !isVo && (reportMeta.presetId === 't01_transactions' || reportMeta.layoutType === 't01_grid');
-  const isEkyc = !isLakhpati && !isVoIndividual && !isVo && !isT01 && (reportMeta.presetId === 'ekyc_progress' || reportMeta.layoutType === 'ekyc_grid');
+  const isP01 = reportMeta.presetId === 'p01_shg_households' || reportMeta.layoutType === 'p01_grid';
+  const isLakhpati = !isP01 && (reportMeta.presetId === 'lakhpati_didi' || reportMeta.layoutType === 'lakhpati_grid');
+  const isVoIndividual = !isP01 && !isLakhpati && (reportMeta.presetId === 't01_vo_individual' || reportMeta.layoutType === 't01_vo_individual_grid');
+  const isVo = !isP01 && !isLakhpati && !isVoIndividual && (reportMeta.presetId === 't01_vo_transactions' || reportMeta.layoutType === 't01_vo_grid');
+  const isT01 = !isP01 && !isLakhpati && !isVoIndividual && !isVo && (reportMeta.presetId === 't01_transactions' || reportMeta.layoutType === 't01_grid');
+  const isEkyc = !isP01 && !isLakhpati && !isVoIndividual && !isVo && !isT01 && (reportMeta.presetId === 'ekyc_progress' || reportMeta.layoutType === 'ekyc_grid');
 
   const [sortCol, setSortCol] = useState(reportMeta.sortByCol || '');
   const [sortDir, setSortDir] = useState(reportMeta.sortDir || 'asc');
@@ -149,6 +150,13 @@ export default function ReportViewer({
       }
     }
 
+    if (col.indicator === 'p01_shg_arrow' || col.cellStyle === 'p01_shg_arrow' || col.isShgOnDate) {
+      const arrowMeta = getP01ShgArrow(num);
+      if (arrowMeta) {
+        return <span className={`inline-block ml-1 ${arrowMeta.colorClass}`}>{arrowMeta.symbol}</span>;
+      }
+    }
+
     return null;
   };
 
@@ -219,7 +227,32 @@ export default function ReportViewer({
 
       {/* 2. Official Report Container (Exact image replica) */}
       <div className="bg-white border-2 border-slate-300 shadow-lg rounded-xl overflow-hidden">
-        {isLakhpati ? (
+        {isP01 ? (
+          <div>
+            {/* P01 Top Title: Red Centered */}
+            <div className="py-2.5 px-4 text-center border-b border-slate-300 bg-white">
+              <h1 className="text-base sm:text-lg font-bold text-[#c00000] tracking-wide uppercase">
+                {reportMeta.title || 'P01 - SMC - SHGs and Households'}
+              </h1>
+            </div>
+
+            {/* P01 4-Box Subheader Row: District, Block, Panchayat, Date */}
+            <div className="grid grid-cols-2 md:grid-cols-4 border-b-2 border-slate-400 bg-white text-xs font-bold text-[#c00000]">
+              <div className="py-2 px-3 text-center border-b md:border-b-0 border-r border-slate-300 flex items-center justify-center">
+                <span>District: {reportMeta.district || 'PURBI CHAMPARAN'}</span>
+              </div>
+              <div className="py-2 px-3 text-center border-b md:border-b-0 md:border-r border-slate-300 flex items-center justify-center">
+                <span>Block: {reportMeta.companyName?.replace(/^Block:\s*/i, '').trim() || reportMeta.block || 'KOTWA'}</span>
+              </div>
+              <div className="py-2 px-3 text-center border-r border-slate-300 flex items-center justify-center">
+                <span>Panchayat: {reportMeta.panchayat || 'All Panchayats'}</span>
+              </div>
+              <div className="py-2 px-3 text-center flex items-center justify-center">
+                <span>{reportMeta.dateLabel?.startsWith('Date:') ? reportMeta.dateLabel : `Date:-${reportMeta.reportDate || reportMeta.currentDate || '14-10-2026'}`}</span>
+              </div>
+            </div>
+          </div>
+        ) : isLakhpati ? (
           <div>
             {/* Lakhpati Top Title: Red Centered */}
             <div className="py-2.5 px-4 text-center border-b border-slate-300 bg-white">
@@ -432,7 +465,12 @@ export default function ReportViewer({
                         // Check special cell styles as in the image
                         let cellClass = 'border border-slate-300 py-1.5 px-2 whitespace-nowrap ';
 
-                        if (col.cellStyle === 'gap_red_highlight' || (isLakhpati && col.header === 'Gap')) {
+                        if (isP01 && (col.cellStyle === 'p01_hhs_heatmap' || col.isHhsOnDate || col.header.startsWith('HHs On'))) {
+                          const hColor = getP01HhsHeatmapColor(rawVal);
+                          cellClass += `${hColor.bg} ${hColor.text} text-right font-bold `;
+                        } else if (isP01 && (col.cellStyle === 'p01_shg_arrow' || col.isShgOnDate || (col.header.startsWith('SHG On') && !col.header.startsWith('SHGs')))) {
+                          cellClass += 'text-center font-bold ';
+                        } else if (col.cellStyle === 'gap_red_highlight' || (isLakhpati && col.header === 'Gap')) {
                           cellClass += 'bg-[#f87171] text-slate-900 font-bold text-right ';
                         } else if (col.cellStyle === 'lakhpati_progress_badge' || (isLakhpati && col.header === 'Yesterday Progress')) {
                           const pMeta = getLakhpatiProgressColor(rawVal);
@@ -487,7 +525,7 @@ export default function ReportViewer({
             {!isVoIndividual && totals && rows.length > 0 && (
               <tfoot className="sticky bottom-0 z-10">
                 <tr className={`font-bold border-t-2 border-slate-400 border-b-2 border-slate-400 ${
-                  isLakhpati ? 'bg-white text-slate-900' : isVo || isT01 ? 'bg-rose-100/80 text-slate-900' : 'bg-white text-[#c00000]'
+                  isP01 ? 'bg-white text-[#c00000]' : isLakhpati ? 'bg-white text-slate-900' : isVo || isT01 ? 'bg-rose-100/80 text-slate-900' : 'bg-white text-[#c00000]'
                 }`}>
                   <td className="py-2 px-2 text-center border border-slate-300">
                     —
@@ -498,7 +536,7 @@ export default function ReportViewer({
 
                     let displayVal = '';
                     if (isFirst) {
-                      displayVal = 'Total';
+                      displayVal = isP01 ? 'TOTAL' : 'Total';
                     } else if (totalVal !== undefined && totalVal !== '') {
                       displayVal = formatValue(totalVal, col.format);
                     }

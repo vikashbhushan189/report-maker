@@ -209,8 +209,15 @@ export function generateReportData(
       } else if (col.type === 'source') {
         if (rawRow[col.sourceCol] !== undefined && rawRow[col.sourceCol] !== '') {
           rawVal = rawRow[col.sourceCol];
-        } else if (col.fallbackCol && rawRow[col.fallbackCol] !== undefined) {
+        } else if (col.fallbackCol && rawRow[col.fallbackCol] !== undefined && rawRow[col.fallbackCol] !== '') {
           rawVal = rawRow[col.fallbackCol];
+        } else if (col.fallbackPattern) {
+          const matchedKey = Object.keys(rawRow).find(k => k.toLowerCase().includes(col.fallbackPattern.toLowerCase()));
+          if (matchedKey && rawRow[matchedKey] !== undefined && rawRow[matchedKey] !== '') {
+            rawVal = rawRow[matchedKey];
+          } else {
+            rawVal = '';
+          }
         } else {
           rawVal = '';
         }
@@ -410,6 +417,97 @@ export function getLakhpatiProgressColor(val) {
     text: 'text-emerald-950 font-bold',
     excelArgb: 'FF4ADE80',
     excelFontColor: 'FF000000'
+  };
+}
+
+/**
+ * Heat map background and text styling for P01 HHs On [Date] cells
+ * >= 40: Rich Green (#4ade80)
+ * 25-39: Medium Green (#86efac)
+ * 20-24: Light Green (#bbf7d0)
+ * 10-19: Soft Yellow (#fef08a)
+ * 5-9: Pale Orange (#fed7aa)
+ * 1-4: Soft Coral (#fca5a5)
+ * 0 / negative: Coral Red (#f87171)
+ */
+export function getP01HhsHeatmapColor(val) {
+  const num = typeof val === 'number' ? val : Number(String(val).replace(/[%,]/g, '').trim());
+  if (isNaN(num) || num <= 0.0001) {
+    return {
+      bg: 'bg-[#f87171]',
+      text: 'text-slate-900 font-semibold',
+      excelArgb: 'FFF87171'
+    };
+  }
+  if (num >= 40) {
+    return {
+      bg: 'bg-[#52c41a]/70',
+      text: 'text-slate-900 font-semibold',
+      excelArgb: 'FF6EE7B7'
+    };
+  }
+  if (num >= 25) {
+    return {
+      bg: 'bg-[#86efac]',
+      text: 'text-slate-900 font-semibold',
+      excelArgb: 'FF86EFAC'
+    };
+  }
+  if (num >= 20) {
+    return {
+      bg: 'bg-[#bbf7d0]',
+      text: 'text-slate-900 font-semibold',
+      excelArgb: 'FFBBF7D0'
+    };
+  }
+  if (num >= 10) {
+    return {
+      bg: 'bg-[#fef08a]',
+      text: 'text-slate-900 font-semibold',
+      excelArgb: 'FFFEF08A'
+    };
+  }
+  if (num >= 5) {
+    return {
+      bg: 'bg-[#fed7aa]',
+      text: 'text-slate-900 font-semibold',
+      excelArgb: 'FFFED7AA'
+    };
+  }
+  return {
+    bg: 'bg-[#fca5a5]',
+    text: 'text-slate-900 font-semibold',
+    excelArgb: 'FFFCA5A5'
+  };
+}
+
+/**
+ * Arrow indicator symbol and color for P01 SHG On [Date] cells
+ * > 1: ⬆ Green
+ * 0 or 1: ➡ Amber
+ * < 0: ⬇ Red
+ */
+export function getP01ShgArrow(val) {
+  const num = typeof val === 'number' ? val : Number(String(val).replace(/[%,]/g, '').trim());
+  if (isNaN(num)) return null;
+  if (num > 1) {
+    return {
+      symbol: '⬆',
+      colorClass: 'text-emerald-700 font-bold',
+      excelSymbol: '↑'
+    };
+  }
+  if (num >= 0) {
+    return {
+      symbol: '➡',
+      colorClass: 'text-amber-500 font-bold',
+      excelSymbol: '→'
+    };
+  }
+  return {
+    symbol: '⬇',
+    colorClass: 'text-rose-600 font-bold',
+    excelSymbol: '↓'
   };
 }
 

@@ -940,6 +940,51 @@ export const SAMPLE_DATASETS = {
     ]
   },
 
+  p01_shg_households: {
+    name: 'P01 - SMC - SHGs and Households (16 Panchayats)',
+    description: 'Kotwa Block: 16 Gram Panchayats with SHGs & HHs till March-23, April-2023 to October-2026, Daily progress on 13-10-2026, and Cumulative totals.',
+    filename: 'P01_SMC_SHGs_and_Households_Kotwa.xlsx',
+    defaultPreset: 'p01_shg_households',
+    meta: {
+      block: 'KOTWA',
+      district: 'PURBI CHAMPARAN',
+      state: 'BIHAR',
+      date: '14-10-2026',
+      reportDate: '13-10-2026',
+      period: 'October-2026'
+    },
+    portalTotals: {
+      excelRow: 4,
+      'Gram Panchayat': 'Total',
+      'SHGs Till March-23': 1826,
+      'HHs Till March-23': 13822,
+      'SHGs April-2023 to October-2026': 871,
+      'HHs April-2023 to October-2026': 13380,
+      'SHG On 13-10-2026': 11,
+      'HHs On 13-10-2026': 252,
+      'SHGs in Cumulative': 2697,
+      'Members in Cumulative': 27202
+    },
+    data: [
+      { _excelRowNumber: 5, _sno: 1, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'KOTWA', 'Gram Panchayat': 'KARARIYA', 'SHGs Till March-23': 163, 'HHs Till March-23': 1308, 'SHGs April-2023 to October-2026': 67, 'HHs April-2023 to October-2026': 1141, 'SHG On 13-10-2026': 3, 'HHs On 13-10-2026': 56, 'SHGs in Cumulative': 230, 'Members in Cumulative': 2449 },
+      { _excelRowNumber: 6, _sno: 2, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'KOTWA', 'Gram Panchayat': 'POKHARA', 'SHGs Till March-23': 125, 'HHs Till March-23': 884, 'SHGs April-2023 to October-2026': 45, 'HHs April-2023 to October-2026': 836, 'SHG On 13-10-2026': 1, 'HHs On 13-10-2026': 48, 'SHGs in Cumulative': 170, 'Members in Cumulative': 1720 },
+      { _excelRowNumber: 7, _sno: 3, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'KOTWA', 'Gram Panchayat': 'MACHHARGAWA', 'SHGs Till March-23': 185, 'HHs Till March-23': 1451, 'SHGs April-2023 to October-2026': 93, 'HHs April-2023 to October-2026': 1159, 'SHG On 13-10-2026': 3, 'HHs On 13-10-2026': 30, 'SHGs in Cumulative': 278, 'Members in Cumulative': 2610 },
+      { _excelRowNumber: 8, _sno: 4, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'KOTWA', 'Gram Panchayat': 'BHAHARWA KALA EAST', 'SHGs Till March-23': 126, 'HHs Till March-23': 881, 'SHGs April-2023 to October-2026': 41, 'HHs April-2023 to October-2026': 974, 'SHG On 13-10-2026': 2, 'HHs On 13-10-2026': 26, 'SHGs in Cumulative': 167, 'Members in Cumulative': 1855 },
+      { _excelRowNumber: 9, _sno: 5, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'KOTWA', 'Gram Panchayat': 'MAHARANI BHOPTA', 'SHGs Till March-23': 158, 'HHs Till March-23': 1275, 'SHGs April-2023 to October-2026': 42, 'HHs April-2023 to October-2026': 713, 'SHG On 13-10-2026': 0, 'HHs On 13-10-2026': 24, 'SHGs in Cumulative': 200, 'Members in Cumulative': 1988 },
+      { _excelRowNumber: 10, _sno: 6, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'KOTWA', 'Gram Panchayat': 'BHAHARWA KALA WEST', 'SHGs Till March-23': 80, 'HHs Till March-23': 521, 'SHGs April-2023 to October-2026': 47, 'HHs April-2023 to October-2026': 786, 'SHG On 13-10-2026': 1, 'HHs On 13-10-2026': 21, 'SHGs in Cumulative': 127, 'Members in Cumulative': 1307 },
+      { _excelRowNumber: 11, _sno: 7, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'KOTWA', 'Gram Panchayat': 'BHOPATPUR SOUTH', 'SHGs Till March-23': 97, 'HHs Till March-23': 557, 'SHGs April-2023 to October-2026': 49, 'HHs April-2023 to October-2026': 900, 'SHG On 13-10-2026': 1, 'HHs On 13-10-2026': 12, 'SHGs in Cumulative': 146, 'Members in Cumulative': 1457 },
+      { _excelRowNumber: 12, _sno: 8, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'KOTWA', 'Gram Panchayat': 'BATHANA', 'SHGs Till March-23': 91, 'HHs Till March-23': 793, 'SHGs April-2023 to October-2026': 73, 'HHs April-2023 to October-2026': 895, 'SHG On 13-10-2026': 1, 'HHs On 13-10-2026': 11, 'SHGs in Cumulative': 164, 'Members in Cumulative': 1688 },
+      { _excelRowNumber: 13, _sno: 9, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'KOTWA', 'Gram Panchayat': 'BHOPATPUR NORTH', 'SHGs Till March-23': 111, 'HHs Till March-23': 818, 'SHGs April-2023 to October-2026': 50, 'HHs April-2023 to October-2026': 625, 'SHG On 13-10-2026': 0, 'HHs On 13-10-2026': 8, 'SHGs in Cumulative': 161, 'Members in Cumulative': 1443 },
+      { _excelRowNumber: 14, _sno: 10, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'KOTWA', 'Gram Panchayat': 'JAGIRAHA', 'SHGs Till March-23': 86, 'HHs Till March-23': 813, 'SHGs April-2023 to October-2026': 32, 'HHs April-2023 to October-2026': 324, 'SHG On 13-10-2026': 0, 'HHs On 13-10-2026': 4, 'SHGs in Cumulative': 118, 'Members in Cumulative': 1137 },
+      { _excelRowNumber: 15, _sno: 11, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'KOTWA', 'Gram Panchayat': 'JASAULI', 'SHGs Till March-23': 151, 'HHs Till March-23': 1121, 'SHGs April-2023 to October-2026': 56, 'HHs April-2023 to October-2026': 952, 'SHG On 13-10-2026': -1, 'HHs On 13-10-2026': 4, 'SHGs in Cumulative': 207, 'Members in Cumulative': 2073 },
+      { _excelRowNumber: 16, _sno: 12, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'KOTWA', 'Gram Panchayat': 'JASAULI PATTI', 'SHGs Till March-23': 85, 'HHs Till March-23': 641, 'SHGs April-2023 to October-2026': 28, 'HHs April-2023 to October-2026': 504, 'SHG On 13-10-2026': 0, 'HHs On 13-10-2026': 4, 'SHGs in Cumulative': 113, 'Members in Cumulative': 1145 },
+      { _excelRowNumber: 17, _sno: 13, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'KOTWA', 'Gram Panchayat': 'AHIRAULIYA', 'SHGs Till March-23': 108, 'HHs Till March-23': 827, 'SHGs April-2023 to October-2026': 70, 'HHs April-2023 to October-2026': 963, 'SHG On 13-10-2026': 0, 'HHs On 13-10-2026': 3, 'SHGs in Cumulative': 178, 'Members in Cumulative': 1790 },
+      { _excelRowNumber: 18, _sno: 14, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'KOTWA', 'Gram Panchayat': 'GOPI CHHAPRA', 'SHGs Till March-23': 103, 'HHs Till March-23': 813, 'SHGs April-2023 to October-2026': 99, 'HHs April-2023 to October-2026': 1278, 'SHG On 13-10-2026': 0, 'HHs On 13-10-2026': 1, 'SHGs in Cumulative': 202, 'Members in Cumulative': 2091 },
+      { _excelRowNumber: 19, _sno: 15, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'KOTWA', 'Gram Panchayat': 'DUMRA', 'SHGs Till March-23': 72, 'HHs Till March-23': 518, 'SHGs April-2023 to October-2026': 29, 'HHs April-2023 to October-2026': 520, 'SHG On 13-10-2026': 0, 'HHs On 13-10-2026': 0, 'SHGs in Cumulative': 101, 'Members in Cumulative': 1038 },
+      { _excelRowNumber: 20, _sno: 16, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'KOTWA', 'Gram Panchayat': 'KOTWA', 'SHGs Till March-23': 85, 'HHs Till March-23': 601, 'SHGs April-2023 to October-2026': 50, 'HHs April-2023 to October-2026': 810, 'SHG On 13-10-2026': 0, 'HHs On 13-10-2026': 0, 'SHGs in Cumulative': 135, 'Members in Cumulative': 1411 }
+    ]
+  },
+
   sales: {
     name: 'Sales & Revenue Performance',
     description: 'Retail & wholesale order transactions with prices, units, and discounts.',

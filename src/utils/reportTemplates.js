@@ -401,6 +401,128 @@ export function generateEkycColumns(yesterdayDate = '12-10-2026', dayBeforeYeste
 }
 
 /**
+ * Detect dynamic date in P01 column headers (e.g. "SHG On 18-10-2026" -> "18-10-2026")
+ */
+export function detectP01Date(headers = []) {
+  for (const h of headers) {
+    const match = String(h || '').match(/(?:SHG|HHs)\s+On\s+([0-9A-Za-z-]+)/i);
+    if (match) {
+      return match[1].trim();
+    }
+  }
+  return '13-10-2026';
+}
+
+/**
+ * Detect dynamic period in P01 column headers (e.g. "SHGs April-2023 to October-2026" -> "October-2026")
+ */
+export function detectP01Period(headers = []) {
+  for (const h of headers) {
+    const match = String(h || '').match(/(?:SHGs|HHs)\s+April-2023\s+to\s+([0-9A-Za-z-]+)/i);
+    if (match) {
+      return match[1].trim();
+    }
+  }
+  return 'October-2026';
+}
+
+/**
+ * Dynamically builds column definitions for P01 SMC SHGs and Households Report
+ */
+export function generateP01Columns(date = '13-10-2026', period = 'October-2026') {
+  const shgPeriodHeader = `SHGs April-2023 to ${period}`;
+  const hhsPeriodHeader = `HHs April-2023 to ${period}`;
+  const shgDateHeader = `SHG On ${date}`;
+  const hhsDateHeader = `HHs On ${date}`;
+
+  return [
+    {
+      id: 'col_gp',
+      header: 'Gram Panchayat',
+      type: 'source',
+      sourceCol: 'Gram Panchayat',
+      format: 'text',
+      summaryOp: 'none'
+    },
+    {
+      id: 'col_shg_march23',
+      header: 'SHGs Till March-23',
+      type: 'source',
+      sourceCol: 'SHGs Till March-23',
+      format: 'number',
+      summaryOp: 'sum'
+    },
+    {
+      id: 'col_hhs_march23',
+      header: 'HHs Till March-23',
+      type: 'source',
+      sourceCol: 'HHs Till March-23',
+      format: 'number',
+      summaryOp: 'sum'
+    },
+    {
+      id: 'col_shg_period',
+      header: shgPeriodHeader,
+      type: 'source',
+      sourceCol: shgPeriodHeader,
+      fallbackPattern: 'SHGs April-2023',
+      format: 'number',
+      summaryOp: 'sum'
+    },
+    {
+      id: 'col_hhs_period',
+      header: hhsPeriodHeader,
+      type: 'source',
+      sourceCol: hhsPeriodHeader,
+      fallbackPattern: 'HHs April-2023',
+      format: 'number',
+      summaryOp: 'sum'
+    },
+    {
+      id: 'col_shg_on_date',
+      header: shgDateHeader,
+      type: 'source',
+      sourceCol: shgDateHeader,
+      fallbackPattern: 'SHG On',
+      format: 'integer',
+      summaryOp: 'sum',
+      cellStyle: 'p01_shg_arrow',
+      indicator: 'p01_shg_arrow',
+      isShgOnDate: true
+    },
+    {
+      id: 'col_hhs_on_date',
+      header: hhsDateHeader,
+      type: 'source',
+      sourceCol: hhsDateHeader,
+      fallbackPattern: 'HHs On',
+      format: 'integer',
+      summaryOp: 'sum',
+      cellStyle: 'p01_hhs_heatmap',
+      isHhsOnDate: true
+    },
+    {
+      id: 'col_shg_cumulative',
+      header: 'SHGs in Cumulative',
+      type: 'formula',
+      formula: `[SHGs Till March-23] + [${shgPeriodHeader}]`,
+      fallbackCol: 'SHGs in Cumulative',
+      format: 'number',
+      summaryOp: 'sum'
+    },
+    {
+      id: 'col_members_cumulative',
+      header: 'Members in Cumulative',
+      type: 'source',
+      sourceCol: 'Members in Cumulative',
+      fallbackCol: 'Members in Cumulative',
+      format: 'number',
+      summaryOp: 'sum'
+    }
+  ];
+}
+
+/**
  * Dynamically builds column definitions for Lakhpati Didi Entry Status Report
  */
 export function generateLakhpatiColumns() {
@@ -490,6 +612,28 @@ export function generateLakhpatiColumns() {
 }
 
 export const REPORT_TOPICS = [
+  {
+    id: 'p01_shg_households',
+    topicName: 'P01 - SMC - SHGs and Households (Official Image Format)',
+    badge: 'Official SMC Format',
+    isPrimary: false,
+    title: 'P01 - SMC - SHGs and Households',
+    subtitle: 'P01 - SMC - SHGs and Households Panchayat: All Panchayats',
+    companyName: 'Block: KOTWA',
+    district: 'PURBI CHAMPARAN',
+    block: 'KOTWA',
+    panchayat: 'All Panchayats',
+    dateLabel: 'Date:-14-10-2026',
+    currentDate: '14-10-2026',
+    reportDate: '13-10-2026',
+    period: 'October-2026',
+    theme: 'ekyc_olive',
+    layoutType: 'p01_grid',
+    sortByCol: 'HHs On 13-10-2026',
+    sortDir: 'desc',
+    description: 'Official P01 SMC SHGs and Households format: Tracks pre-March 2023, April 2023 to current, Daily SHG progress with directional arrows, Daily HHs progress with heat map gradient, and cumulative totals.',
+    columns: generateP01Columns('13-10-2026', 'October-2026')
+  },
   {
     id: 'lakhpati_didi',
     topicName: 'Lakhpati Didi Entry Status Report - (Q2 : Jul-sep), 2026-27',

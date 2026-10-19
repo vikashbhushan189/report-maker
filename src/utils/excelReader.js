@@ -1,5 +1,5 @@
 import * as XLSX from 'xlsx';
-import { detectT01Months, detectVoMonths, detectVoIndividualMonths } from './reportTemplates.js';
+import { detectT01Months, detectVoMonths, detectVoIndividualMonths, detectP01Date, detectP01Period } from './reportTemplates.js';
 
 /**
  * Reads an Excel or CSV File object and returns parsed workbook information
@@ -34,6 +34,8 @@ export async function parseExcelFile(file) {
           data: sheetData.data,
           metadata: sheetData.metadata,
           detectedMonths: sheetData.detectedMonths,
+          detectedP01Date: sheetData.detectedP01Date,
+          detectedP01Period: sheetData.detectedP01Period,
           portalTotals: sheetData.portalTotals,
           totalRowIndex: sheetData.totalRowIndex,
           dataStartRowIndex: sheetData.dataStartRowIndex,
@@ -76,6 +78,8 @@ export function parseRawText(rawText) {
     data: sheetData.data,
     metadata: sheetData.metadata,
     detectedMonths: sheetData.detectedMonths,
+    detectedP01Date: sheetData.detectedP01Date,
+    detectedP01Period: sheetData.detectedP01Period,
     portalTotals: sheetData.portalTotals,
     totalRowIndex: sheetData.totalRowIndex,
     dataStartRowIndex: sheetData.dataStartRowIndex,
@@ -123,6 +127,9 @@ export function extractSheetData(workbook, sheetName) {
     } else if (rowStr.toLowerCase().includes('vo transactions monitoring') || rowStr.toLowerCase().includes('clf name') || rowStr.toLowerCase().includes('total vos')) {
       metadata.title = 'T01 - VO Transactions Monitoring Status';
       metadata.reportType = 't01_vo';
+    } else if (rowStr.toLowerCase().includes('p01') || rowStr.toLowerCase().includes('shgs and households')) {
+      metadata.title = 'P01 - SMC - SHGs and Households';
+      metadata.reportType = 'p01_shg_households';
     } else if (rowStr.toLowerCase().includes('transactions monitoring') || rowStr.toLowerCase().includes('t01')) {
       metadata.title = 'T01 - SHG Transactions Monitoring Status';
       metadata.reportType = 't01';
@@ -274,11 +281,16 @@ export function extractSheetData(workbook, sheetName) {
     detectedMonths = detectVoIndividualMonths(cleanHeaders);
   }
 
+  const detectedP01Date = detectP01Date(cleanHeaders);
+  const detectedP01Period = detectP01Period(cleanHeaders);
+
   return {
     headers: cleanHeaders,
     data,
     metadata,
     detectedMonths,
+    detectedP01Date,
+    detectedP01Period,
     portalTotals,
     totalRowIndex: totalRowIndex !== -1 ? totalRowIndex : 4,
     dataStartRowIndex: dataStartRowIndex !== -1 ? dataStartRowIndex : 5,

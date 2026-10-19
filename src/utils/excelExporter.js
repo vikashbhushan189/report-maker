@@ -1,6 +1,6 @@
 import ExcelJS from 'exceljs';
 import { REPORT_THEMES } from './reportTemplates.js';
-import { getT01PctColor, getVoPctColor, getLakhpatiProgressColor } from './formulaEngine.js';
+import { getT01PctColor, getVoPctColor, getLakhpatiProgressColor, getP01HhsHeatmapColor, getP01ShgArrow } from './formulaEngine.js';
 
 /**
  * Convert 1-indexed column number to Excel column letter (1 -> 'A', 2 -> 'B', etc.)
@@ -29,11 +29,12 @@ export async function exportToStyledExcel({
   filename = 'Report.xlsx'
 }) {
   const theme = REPORT_THEMES[reportMeta.theme] || REPORT_THEMES.ekyc_olive;
-  const isLakhpati = reportMeta.presetId === 'lakhpati_didi' || reportMeta.layoutType === 'lakhpati_grid';
-  const isVoIndividual = !isLakhpati && (reportMeta.presetId === 't01_vo_individual' || reportMeta.layoutType === 't01_vo_individual_grid');
-  const isVo = !isLakhpati && !isVoIndividual && (reportMeta.presetId === 't01_vo_transactions' || reportMeta.layoutType === 't01_vo_grid');
-  const isT01 = !isLakhpati && !isVoIndividual && !isVo && (reportMeta.presetId === 't01_transactions' || reportMeta.layoutType === 't01_grid');
-  const isEkyc = !isLakhpati && !isVoIndividual && !isVo && !isT01 && (reportMeta.presetId === 'ekyc_progress' || reportMeta.layoutType === 'ekyc_grid');
+  const isP01 = reportMeta.presetId === 'p01_shg_households' || reportMeta.layoutType === 'p01_grid';
+  const isLakhpati = !isP01 && (reportMeta.presetId === 'lakhpati_didi' || reportMeta.layoutType === 'lakhpati_grid');
+  const isVoIndividual = !isP01 && !isLakhpati && (reportMeta.presetId === 't01_vo_individual' || reportMeta.layoutType === 't01_vo_individual_grid');
+  const isVo = !isP01 && !isLakhpati && !isVoIndividual && (reportMeta.presetId === 't01_vo_transactions' || reportMeta.layoutType === 't01_vo_grid');
+  const isT01 = !isP01 && !isLakhpati && !isVoIndividual && !isVo && (reportMeta.presetId === 't01_transactions' || reportMeta.layoutType === 't01_grid');
+  const isEkyc = !isP01 && !isLakhpati && !isVoIndividual && !isVo && !isT01 && (reportMeta.presetId === 'ekyc_progress' || reportMeta.layoutType === 'ekyc_grid');
 
   const workbook = new ExcelJS.Workbook();
   workbook.creator = 'Report Studio';
@@ -41,7 +42,7 @@ export async function exportToStyledExcel({
   workbook.created = new Date();
   workbook.modified = new Date();
 
-  const sheetName = isLakhpati ? 'Lakhpati Didi Status Report' : (isVoIndividual ? 'VO Monitoring Status' : (isVo ? 'VO Transactions Report' : (isT01 ? 'SHG Transactions Report' : (isEkyc ? 'KYC Progress Report' : 'Report'))));
+  const sheetName = isP01 ? 'SHGs and Households' : (isLakhpati ? 'Lakhpati Didi Status Report' : (isVoIndividual ? 'VO Monitoring Status' : (isVo ? 'VO Transactions Report' : (isT01 ? 'SHG Transactions Report' : (isEkyc ? 'KYC Progress Report' : 'Report')))));
   const sheet = workbook.addWorksheet(sheetName, {
     views: [{ showGridLines: true }],
     pageSetup: { orientation: 'landscape', fitToPage: true, fitToWidth: 1 }
@@ -67,7 +68,72 @@ export async function exportToStyledExcel({
     colLetterMap[col.header] = getColLetter(idx + 2);
   });
 
-  if (isLakhpati) {
+  if (isP01) {
+    // ----------------------------------------------------
+    // 1. P01 HEADER: Title Banner (Row 1)
+    // ----------------------------------------------------
+    const titleRow = sheet.getRow(currentRowIdx);
+    titleRow.values = [reportMeta.title || 'P01 - SMC - SHGs and Households'];
+    titleRow.height = 28;
+    titleRow.font = { name: 'Calibri', size: 14, bold: true, color: { argb: 'FFC00000' } };
+    titleRow.alignment = { vertical: 'middle', horizontal: 'center' };
+    sheet.mergeCells(currentRowIdx, 1, currentRowIdx, totalColsCount);
+
+    const titleCell = sheet.getCell(currentRowIdx, 1);
+    titleCell.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFFFFFFF' }
+    };
+    for (let c = 1; c <= totalColsCount; c++) {
+      sheet.getCell(currentRowIdx, c).border = borderThin;
+    }
+    currentRowIdx++;
+
+    // ----------------------------------------------------
+    // 2. P01 SUBHEADER: 4-Box Row (District, Block, Panchayat, Date)
+    // ----------------------------------------------------
+    const subheaderRow = sheet.getRow(currentRowIdx);
+    subheaderRow.height = 24;
+
+    const districtText = `District: ${reportMeta.district || 'PURBI CHAMPARAN'}`;
+    const blockText = `Block: ${reportMeta.companyName?.replace(/^Block:\s*/i, '').trim() || reportMeta.block || 'KOTWA'}`;
+    const panchayatText = `Panchayat: ${reportMeta.panchayat || 'All Panchayats'}`;
+    const dateText = reportMeta.dateLabel?.startsWith('Date:') ? reportMeta.dateLabel : `Date:-${reportMeta.reportDate || reportMeta.currentDate || '14-10-2026'}`;
+
+    const b1End = Math.max(2, Math.round(totalColsCount * 0.25));
+    const b2End = Math.max(b1End + 1, Math.round(totalColsCount * 0.5));
+    const b3End = Math.max(b2End + 1, Math.round(totalColsCount * 0.75));
+    const b4End = totalColsCount;
+
+    sheet.mergeCells(currentRowIdx, 1, currentRowIdx, b1End);
+    sheet.mergeCells(currentRowIdx, b1End + 1, currentRowIdx, b2End);
+    sheet.mergeCells(currentRowIdx, b2End + 1, currentRowIdx, b3End);
+    sheet.mergeCells(currentRowIdx, b3End + 1, currentRowIdx, b4End);
+
+    const formatSubBox = (colStart, text) => {
+      const cell = sheet.getCell(currentRowIdx, colStart);
+      cell.value = text;
+      cell.font = { name: 'Calibri', size: 11, bold: true, color: { argb: 'FFC00000' } };
+      cell.alignment = { vertical: 'middle', horizontal: 'center' };
+    };
+
+    formatSubBox(1, districtText);
+    formatSubBox(b1End + 1, blockText);
+    formatSubBox(b2End + 1, panchayatText);
+    formatSubBox(b3End + 1, dateText);
+
+    for (let c = 1; c <= totalColsCount; c++) {
+      const cell = sheet.getCell(currentRowIdx, c);
+      cell.border = borderThin;
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFFFFFFF' }
+      };
+    }
+    currentRowIdx++;
+  } else if (isLakhpati) {
     // ----------------------------------------------------
     // 1. LAKHPATI HEADER: Title Banner (Row 1)
     // ----------------------------------------------------
@@ -373,6 +439,74 @@ export async function exportToStyledExcel({
 
       const rawVal = row[col.header];
       const numVal = typeof rawVal === 'number' ? rawVal : Number(String(rawVal || '').replace(/[$,%]/g, '').trim());
+
+      // --------------------------------------------------
+      // CELL STYLING FOR P01 (SHGs and Households)
+      // --------------------------------------------------
+      if (isP01) {
+        if (col.header === 'Gram Panchayat') {
+          colCell.value = rawVal || '';
+          colCell.alignment = { vertical: 'middle', horizontal: 'left' };
+          colCell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FF000000' } };
+          return;
+        }
+
+        // Arrow indicator for SHG On [Date]
+        if (col.isShgOnDate || col.cellStyle === 'p01_shg_arrow' || (col.header.startsWith('SHG On') && !col.header.startsWith('SHGs'))) {
+          colCell.value = isNaN(numVal) ? (rawVal || 0) : numVal;
+          colCell.numFmt = '0" ↑";-0" ↓";0" →"';
+          colCell.alignment = { vertical: 'middle', horizontal: 'center' };
+          let fontColor = 'FF15803D'; // green
+          if (numVal <= 1 && numVal >= 0) fontColor = 'FFF59E0B'; // amber
+          else if (numVal < 0) fontColor = 'FFE11D48'; // red
+          colCell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: fontColor } };
+          return;
+        }
+
+        // Heatmap for HHs On [Date]
+        if (col.isHhsOnDate || col.cellStyle === 'p01_hhs_heatmap' || col.header.startsWith('HHs On')) {
+          colCell.value = isNaN(numVal) ? (rawVal || 0) : numVal;
+          colCell.numFmt = '#,##0';
+          colCell.alignment = { vertical: 'middle', horizontal: 'right' };
+          const colorMeta = getP01HhsHeatmapColor(numVal);
+          if (colorMeta && colorMeta.excelArgb) {
+            colCell.fill = {
+              type: 'pattern',
+              pattern: 'solid',
+              fgColor: { argb: colorMeta.excelArgb }
+            };
+            colCell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FF000000' } };
+          }
+          return;
+        }
+
+        // SHGs in Cumulative formula: [SHGs Till March-23] + [SHGs April-2023 to October-2026]
+        if (col.header === 'SHGs in Cumulative') {
+          const colShgMarch = colLetterMap['SHGs Till March-23'];
+          const shgAprHeader = Object.keys(colLetterMap).find(h => h.startsWith('SHGs April-2023'));
+          const colShgApr = shgAprHeader ? colLetterMap[shgAprHeader] : null;
+
+          if (colShgMarch && colShgApr) {
+            colCell.value = {
+              formula: `${colShgMarch}${currentRowIdx}+${colShgApr}${currentRowIdx}`,
+              result: isNaN(numVal) ? 0 : numVal
+            };
+          } else {
+            colCell.value = isNaN(numVal) ? (rawVal || 0) : numVal;
+          }
+          colCell.numFmt = '#,##0';
+          colCell.alignment = { vertical: 'middle', horizontal: 'right' };
+          return;
+        }
+
+        // Other numeric columns in P01
+        if (['SHGs Till March-23', 'HHs Till March-23', 'Members in Cumulative'].includes(col.header) || col.header.startsWith('SHGs April-2023') || col.header.startsWith('HHs April-2023')) {
+          colCell.value = isNaN(numVal) ? (rawVal || 0) : numVal;
+          colCell.numFmt = '#,##0';
+          colCell.alignment = { vertical: 'middle', horizontal: 'right' };
+          return;
+        }
+      }
 
       // --------------------------------------------------
       // CELL STYLING FOR LAKHPATI DIDI
@@ -759,7 +893,7 @@ export async function exportToStyledExcel({
       }
 
       if (cIdx === 0) {
-        colCell.value = 'Total';
+        colCell.value = isP01 ? 'TOTAL' : 'Total';
         colCell.alignment = { vertical: 'middle', horizontal: 'center' };
         return;
       }
@@ -771,6 +905,36 @@ export async function exportToStyledExcel({
 
       const totalVal = totals[col.header];
       const numTotal = typeof totalVal === 'number' ? totalVal : Number(String(totalVal || '').replace(/[$,%]/g, '').trim());
+
+      // --------------------------------------------------
+      // TOTAL FORMULAS FOR P01 (SHGs and Households)
+      // --------------------------------------------------
+      if (isP01) {
+        if (col.header === 'SHGs in Cumulative') {
+          const colShgMarch = colLetterMap['SHGs Till March-23'];
+          const shgAprHeader = Object.keys(colLetterMap).find(h => h.startsWith('SHGs April-2023'));
+          const colShgApr = shgAprHeader ? colLetterMap[shgAprHeader] : null;
+          if (colShgMarch && colShgApr) {
+            colCell.value = {
+              formula: `${colShgMarch}${totalRowIdx}+${colShgApr}${totalRowIdx}`,
+              result: isNaN(numTotal) ? 0 : numTotal
+            };
+          } else {
+            colCell.value = {
+              formula: `SUM(${colLetter}${firstDataRowIdx}:${colLetter}${lastDataRowIdx})`,
+              result: isNaN(numTotal) ? 0 : numTotal
+            };
+          }
+        } else {
+          colCell.value = {
+            formula: `SUM(${colLetter}${firstDataRowIdx}:${colLetter}${lastDataRowIdx})`,
+            result: isNaN(numTotal) ? 0 : numTotal
+          };
+        }
+        colCell.numFmt = '#,##0';
+        colCell.alignment = { vertical: 'middle', horizontal: 'right' };
+        return;
+      }
 
       // --------------------------------------------------
       // TOTAL FORMULAS FOR LAKHPATI DIDI
