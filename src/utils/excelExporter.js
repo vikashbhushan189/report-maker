@@ -1,6 +1,6 @@
 import ExcelJS from 'exceljs';
 import { REPORT_THEMES } from './reportTemplates.js';
-import { getT01PctColor, getVoPctColor } from './formulaEngine.js';
+import { getT01PctColor, getVoPctColor, getLakhpatiProgressColor } from './formulaEngine.js';
 
 /**
  * Convert 1-indexed column number to Excel column letter (1 -> 'A', 2 -> 'B', etc.)
@@ -29,10 +29,11 @@ export async function exportToStyledExcel({
   filename = 'Report.xlsx'
 }) {
   const theme = REPORT_THEMES[reportMeta.theme] || REPORT_THEMES.ekyc_olive;
-  const isVoIndividual = reportMeta.presetId === 't01_vo_individual' || reportMeta.layoutType === 't01_vo_individual_grid';
-  const isVo = !isVoIndividual && (reportMeta.presetId === 't01_vo_transactions' || reportMeta.layoutType === 't01_vo_grid');
-  const isT01 = !isVoIndividual && !isVo && (reportMeta.presetId === 't01_transactions' || reportMeta.layoutType === 't01_grid');
-  const isEkyc = !isVoIndividual && !isVo && !isT01 && (reportMeta.presetId === 'ekyc_progress' || reportMeta.layoutType === 'ekyc_grid');
+  const isLakhpati = reportMeta.presetId === 'lakhpati_didi' || reportMeta.layoutType === 'lakhpati_grid';
+  const isVoIndividual = !isLakhpati && (reportMeta.presetId === 't01_vo_individual' || reportMeta.layoutType === 't01_vo_individual_grid');
+  const isVo = !isLakhpati && !isVoIndividual && (reportMeta.presetId === 't01_vo_transactions' || reportMeta.layoutType === 't01_vo_grid');
+  const isT01 = !isLakhpati && !isVoIndividual && !isVo && (reportMeta.presetId === 't01_transactions' || reportMeta.layoutType === 't01_grid');
+  const isEkyc = !isLakhpati && !isVoIndividual && !isVo && !isT01 && (reportMeta.presetId === 'ekyc_progress' || reportMeta.layoutType === 'ekyc_grid');
 
   const workbook = new ExcelJS.Workbook();
   workbook.creator = 'Report Studio';
@@ -40,7 +41,7 @@ export async function exportToStyledExcel({
   workbook.created = new Date();
   workbook.modified = new Date();
 
-  const sheetName = isVoIndividual ? 'VO Monitoring Status' : (isVo ? 'VO Transactions Report' : (isT01 ? 'SHG Transactions Report' : (isEkyc ? 'KYC Progress Report' : 'Report')));
+  const sheetName = isLakhpati ? 'Lakhpati Didi Status Report' : (isVoIndividual ? 'VO Monitoring Status' : (isVo ? 'VO Transactions Report' : (isT01 ? 'SHG Transactions Report' : (isEkyc ? 'KYC Progress Report' : 'Report'))));
   const sheet = workbook.addWorksheet(sheetName, {
     views: [{ showGridLines: true }],
     pageSetup: { orientation: 'landscape', fitToPage: true, fitToWidth: 1 }
@@ -66,7 +67,68 @@ export async function exportToStyledExcel({
     colLetterMap[col.header] = getColLetter(idx + 2);
   });
 
-  if (isVo || isVoIndividual) {
+  if (isLakhpati) {
+    // ----------------------------------------------------
+    // 1. LAKHPATI HEADER: Title Banner (Row 1)
+    // ----------------------------------------------------
+    const titleRow = sheet.getRow(currentRowIdx);
+    titleRow.values = [reportMeta.title || 'Lakhpati Didi Entry Status Report - (Q2 : Jul-sep), 2026-27'];
+    titleRow.height = 28;
+    titleRow.font = { name: 'Calibri', size: 14, bold: true, color: { argb: 'FFC00000' } };
+    titleRow.alignment = { vertical: 'middle', horizontal: 'center' };
+    sheet.mergeCells(currentRowIdx, 1, currentRowIdx, totalColsCount);
+
+    const titleCell = sheet.getCell(currentRowIdx, 1);
+    titleCell.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFFFFFFF' }
+    };
+    for (let c = 1; c <= totalColsCount; c++) {
+      sheet.getCell(currentRowIdx, c).border = borderThin;
+    }
+    currentRowIdx++;
+
+    // ----------------------------------------------------
+    // 2. LAKHPATI SUBHEADER: 3-Box Row (District, Block, Date)
+    // ----------------------------------------------------
+    const subheaderRow = sheet.getRow(currentRowIdx);
+    subheaderRow.height = 24;
+
+    const districtText = `District: ${reportMeta.district || 'PURBI CHAMPARAN'}`;
+    const blockText = `Block: ${reportMeta.companyName?.replace(/^Block:\s*/i, '').trim() || 'KOTWA'}`;
+    const dateText = `Date:-${reportMeta.currentDate || '15-10-2026'}`;
+
+    const b1End = Math.max(2, Math.floor(totalColsCount * 0.33));
+    const b2End = Math.max(b1End + 1, Math.floor(totalColsCount * 0.67));
+    const b3End = totalColsCount;
+
+    sheet.mergeCells(currentRowIdx, 1, currentRowIdx, b1End);
+    sheet.mergeCells(currentRowIdx, b1End + 1, currentRowIdx, b2End);
+    sheet.mergeCells(currentRowIdx, b2End + 1, currentRowIdx, b3End);
+
+    const formatSubBox = (colStart, text) => {
+      const cell = sheet.getCell(currentRowIdx, colStart);
+      cell.value = text;
+      cell.font = { name: 'Calibri', size: 11, bold: true, color: { argb: 'FFC00000' } };
+      cell.alignment = { vertical: 'middle', horizontal: 'center' };
+    };
+
+    formatSubBox(1, districtText);
+    formatSubBox(b1End + 1, blockText);
+    formatSubBox(b2End + 1, dateText);
+
+    for (let c = 1; c <= totalColsCount; c++) {
+      const cell = sheet.getCell(currentRowIdx, c);
+      cell.border = borderThin;
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFFFFFFF' }
+      };
+    }
+    currentRowIdx++;
+  } else if (isVo || isVoIndividual) {
     // ----------------------------------------------------
     // 1. VO HEADER: Title Banner (Row 1)
     // ----------------------------------------------------
@@ -265,7 +327,7 @@ export async function exportToStyledExcel({
   headerRow.values = ['S.NO', ...columns.map(col => col.header)];
   headerRow.height = 36;
 
-  const headerBgArgb = hexToArgb(theme.primaryColor || '#c5d9a4');
+  const headerBgArgb = isLakhpati ? 'FFFFFF00' : hexToArgb(theme.primaryColor || '#c5d9a4');
 
   headerRow.eachCell((cell, colIdx) => {
     cell.fill = {
@@ -275,7 +337,7 @@ export async function exportToStyledExcel({
     };
 
     const colObj = colIdx > 1 ? columns[colIdx - 2] : null;
-    const isRed = colObj && (colObj.headerColor === '#c00000' || colObj.header.includes('Gap') || colObj.header.includes('Not Verified'));
+    const isRed = isLakhpati || (colObj && (colObj.headerColor === '#c00000' || colObj.header.includes('Gap') || colObj.header.includes('Not Verified')));
 
     cell.font = {
       name: 'Calibri',
@@ -311,6 +373,88 @@ export async function exportToStyledExcel({
 
       const rawVal = row[col.header];
       const numVal = typeof rawVal === 'number' ? rawVal : Number(String(rawVal || '').replace(/[$,%]/g, '').trim());
+
+      // --------------------------------------------------
+      // CELL STYLING FOR LAKHPATI DIDI
+      // --------------------------------------------------
+      if (isLakhpati) {
+        const colTarget = colLetterMap['Target'];
+        const colTotalEntry = colLetterMap['Total Entry'];
+        const colGap = colLetterMap['Gap'];
+
+        if (col.header === 'Gram Panchayat') {
+          colCell.value = rawVal || '';
+          colCell.alignment = { vertical: 'middle', horizontal: 'left' };
+          colCell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FF000000' } };
+          return;
+        }
+
+        if (col.header === 'Active Approved Potential Didis' || col.header === 'Active Approved Potential Lakhpati Didi') {
+          colCell.value = isNaN(numVal) ? (rawVal || 0) : numVal;
+          colCell.numFmt = '#,##0';
+          colCell.alignment = { vertical: 'middle', horizontal: 'right' };
+          return;
+        }
+
+        if (col.header === 'Target') {
+          colCell.value = isNaN(numVal) ? (rawVal || 0) : numVal;
+          colCell.numFmt = '#,##0';
+          colCell.alignment = { vertical: 'middle', horizontal: 'right' };
+          return;
+        }
+
+        if (col.header === 'Total Entry' || col.header.includes('PLD Entered')) {
+          colCell.value = isNaN(numVal) ? (rawVal || 0) : numVal;
+          colCell.numFmt = '#,##0';
+          colCell.alignment = { vertical: 'middle', horizontal: 'right' };
+          return;
+        }
+
+        if (col.header === '% Entry' && colTarget && colTotalEntry) {
+          colCell.value = {
+            formula: `IF(${colTarget}${currentRowIdx}>0, ${colTotalEntry}${currentRowIdx}/${colTarget}${currentRowIdx}, 0)`,
+            result: isNaN(numVal) ? 0 : numVal / 100
+          };
+          colCell.numFmt = '0.00%';
+          colCell.alignment = { vertical: 'middle', horizontal: 'right' };
+          return;
+        }
+
+        if (col.header === 'Gap' && colTarget && colTotalEntry) {
+          colCell.value = {
+            formula: `${colTarget}${currentRowIdx}-${colTotalEntry}${currentRowIdx}`,
+            result: isNaN(numVal) ? 0 : numVal
+          };
+          colCell.numFmt = '#,##0';
+          colCell.alignment = { vertical: 'middle', horizontal: 'right' };
+          colCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF87171' } };
+          colCell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FF000000' } };
+          return;
+        }
+
+        if (col.header === '% Gap' && colTarget && colGap) {
+          colCell.value = {
+            formula: `IF(${colTarget}${currentRowIdx}>0, ${colGap}${currentRowIdx}/${colTarget}${currentRowIdx}, 0)`,
+            result: isNaN(numVal) ? 0 : numVal / 100
+          };
+          colCell.numFmt = '0.00%';
+          colCell.alignment = { vertical: 'middle', horizontal: 'right' };
+          colCell.font = { name: 'Calibri', size: 10, color: { argb: 'FFC00000' } };
+          return;
+        }
+
+        if (col.header === 'Yesterday Progress') {
+          colCell.value = isNaN(numVal) ? (rawVal || 0) : numVal;
+          colCell.numFmt = '#,##0';
+          colCell.alignment = { vertical: 'middle', horizontal: 'center' };
+          const progressColor = getLakhpatiProgressColor(numVal);
+          if (progressColor.excelArgb) {
+            colCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: progressColor.excelArgb } };
+            colCell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: progressColor.excelFontColor || 'FF000000' } };
+          }
+          return;
+        }
+      }
 
       // --------------------------------------------------
       // CELL STYLING FOR VO INDIVIDUAL (YES / NO Captured)
@@ -582,7 +726,7 @@ export async function exportToStyledExcel({
     totalSnoCell.value = '';
     totalSnoCell.border = {
       top: { style: 'thin', color: { argb: 'FF94A3B8' } },
-      bottom: { style: 'double', color: { argb: 'FFC00000' } },
+      bottom: { style: 'double', color: { argb: isLakhpati ? 'FF000000' : 'FFC00000' } },
       left: { style: 'thin', color: { argb: 'FF94A3B8' } },
       right: { style: 'thin', color: { argb: 'FF94A3B8' } }
     };
@@ -595,12 +739,12 @@ export async function exportToStyledExcel({
         name: 'Calibri',
         size: 11,
         bold: true,
-        color: { argb: 'FFC00000' } // Bold Red Font as in Image
+        color: { argb: isLakhpati ? 'FF000000' : 'FFC00000' } // Bold Black for Lakhpati as in image
       };
 
       colCell.border = {
         top: { style: 'thin', color: { argb: 'FF94A3B8' } },
-        bottom: { style: 'double', color: { argb: 'FFC00000' } },
+        bottom: { style: 'double', color: { argb: isLakhpati ? 'FF000000' : 'FFC00000' } },
         left: { style: 'thin', color: { argb: 'FF94A3B8' } },
         right: { style: 'thin', color: { argb: 'FF94A3B8' } }
       };
@@ -627,6 +771,54 @@ export async function exportToStyledExcel({
 
       const totalVal = totals[col.header];
       const numTotal = typeof totalVal === 'number' ? totalVal : Number(String(totalVal || '').replace(/[$,%]/g, '').trim());
+
+      // --------------------------------------------------
+      // TOTAL FORMULAS FOR LAKHPATI DIDI
+      // --------------------------------------------------
+      if (isLakhpati) {
+        const colTarget = colLetterMap['Target'];
+        const colTotalEntry = colLetterMap['Total Entry'];
+        const colGap = colLetterMap['Gap'];
+
+        if (col.header === '% Entry' && colTarget && colTotalEntry) {
+          colCell.value = {
+            formula: `IF(${colTarget}${totalRowIdx}>0, ${colTotalEntry}${totalRowIdx}/${colTarget}${totalRowIdx}, 0)`,
+            result: isNaN(numTotal) ? 0 : numTotal / 100
+          };
+          colCell.numFmt = '0.00%';
+          colCell.alignment = { vertical: 'middle', horizontal: 'right' };
+          return;
+        }
+
+        if (col.header === 'Gap' && colTarget && colTotalEntry) {
+          colCell.value = {
+            formula: `${colTarget}${totalRowIdx}-${colTotalEntry}${totalRowIdx}`,
+            result: isNaN(numTotal) ? 0 : numTotal
+          };
+          colCell.numFmt = '#,##0';
+          colCell.alignment = { vertical: 'middle', horizontal: 'right' };
+          colCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF87171' } };
+          return;
+        }
+
+        if (col.header === '% Gap' && colTarget && colGap) {
+          colCell.value = {
+            formula: `IF(${colTarget}${totalRowIdx}>0, ${colGap}${totalRowIdx}/${colTarget}${totalRowIdx}, 0)`,
+            result: isNaN(numTotal) ? 0 : numTotal / 100
+          };
+          colCell.numFmt = '0.00%';
+          colCell.alignment = { vertical: 'middle', horizontal: 'right' };
+          return;
+        }
+
+        colCell.value = {
+          formula: `SUM(${colLetter}${firstDataRowIdx}:${colLetter}${lastDataRowIdx})`,
+          result: isNaN(numTotal) ? 0 : numTotal
+        };
+        colCell.numFmt = '#,##0';
+        colCell.alignment = { vertical: 'middle', horizontal: 'right' };
+        return;
+      }
 
       // --------------------------------------------------
       // TOTAL FORMULAS FOR VO (VO Transactions)

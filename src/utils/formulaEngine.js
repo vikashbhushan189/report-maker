@@ -186,14 +186,23 @@ export function generateReportData(
     columnConfigs.forEach(col => {
       let rawVal = 0;
 
-      // Handle Manual Editable Columns (e.g. Previous day e-KYC 10-10-2026)
+      // Handle Manual Editable Columns (e.g. Previous day e-KYC 10-10-2026, Target, Yesterday Progress)
       if (col.isManualEditable || col.type === 'manual') {
-        if (manualValues && manualValues[panchayatName] !== undefined && manualValues[panchayatName] !== '') {
+        const keyWithColId = col.id ? `${col.id}_${panchayatName}` : null;
+        const keyWithManualKey = col.manualKey ? `${col.manualKey}_${panchayatName}` : null;
+
+        if (keyWithColId && manualValues && manualValues[keyWithColId] !== undefined && manualValues[keyWithColId] !== '') {
+          rawVal = Number(manualValues[keyWithColId]);
+        } else if (keyWithManualKey && manualValues && manualValues[keyWithManualKey] !== undefined && manualValues[keyWithManualKey] !== '') {
+          rawVal = Number(manualValues[keyWithManualKey]);
+        } else if (manualValues && manualValues[panchayatName] !== undefined && manualValues[panchayatName] !== '' && !col.id?.startsWith('col_target') && !col.id?.startsWith('col_yesterday')) {
           rawVal = Number(manualValues[panchayatName]);
         } else if (rawRow[col.sourceCol] !== undefined && rawRow[col.sourceCol] !== '') {
           rawVal = Number(rawRow[col.sourceCol]);
-        } else if (col.fallbackCol && rawRow[col.fallbackCol] !== undefined) {
+        } else if (col.fallbackCol && rawRow[col.fallbackCol] !== undefined && rawRow[col.fallbackCol] !== '') {
           rawVal = Number(rawRow[col.fallbackCol]);
+        } else if ((col.id === 'col_target' || col.header === 'Target') && rawRow['Active Approved Potential Lakhpati Didi']) {
+          rawVal = Math.round(Number(rawRow['Active Approved Potential Lakhpati Didi']) * 0.625);
         } else {
           rawVal = 0;
         }
@@ -343,9 +352,64 @@ export function generateReportData(
     }
   });
 
+  // 7. Weighted Percentage Totals for Lakhpati Didi Columns (% Entry & % Gap)
+  const targetTotal = totals['Target'];
+  const totalEntryTotal = totals['Total Entry'] ?? totals['Aajeevika Register for Potential Lakhpati Didi PLD Entered'];
+  const gapTotal = totals['Gap'];
+
+  if (targetTotal && Number(targetTotal) > 0) {
+    if (totalEntryTotal !== undefined && totals['% Entry'] !== undefined) {
+      totals['% Entry'] = (Number(totalEntryTotal) / Number(targetTotal)) * 100;
+    }
+    if (gapTotal !== undefined && totals['% Gap'] !== undefined) {
+      totals['% Gap'] = (Number(gapTotal) / Number(targetTotal)) * 100;
+    }
+  }
+
   return {
     rows: calculatedRows,
     totals
+  };
+}
+
+/**
+ * Returns the exact color palette for Lakhpati Didi Yesterday Progress cells
+ * 0 -> Coral Red (#f87171)
+ * 1-19 -> Soft Yellow (#fef08a)
+ * 20-30 -> Soft Green (#86efac)
+ * >30 -> Rich Green (#4ade80)
+ */
+export function getLakhpatiProgressColor(val) {
+  const num = typeof val === 'number' ? val : Number(String(val).replace(/[%,]/g, '').trim());
+  if (isNaN(num) || num <= 0.0001) {
+    return {
+      bg: 'bg-[#f87171]',
+      text: 'text-white font-bold',
+      excelArgb: 'FFF87171',
+      excelFontColor: 'FFFFFFFF'
+    };
+  }
+  if (num >= 1 && num < 20) {
+    return {
+      bg: 'bg-[#fef08a]',
+      text: 'text-amber-950 font-bold',
+      excelArgb: 'FFFEF08A',
+      excelFontColor: 'FF000000'
+    };
+  }
+  if (num >= 20 && num <= 30) {
+    return {
+      bg: 'bg-[#86efac]',
+      text: 'text-emerald-950 font-bold',
+      excelArgb: 'FF86EFAC',
+      excelFontColor: 'FF000000'
+    };
+  }
+  return {
+    bg: 'bg-[#4ade80]',
+    text: 'text-emerald-950 font-bold',
+    excelArgb: 'FF4ADE80',
+    excelFontColor: 'FF000000'
   };
 }
 

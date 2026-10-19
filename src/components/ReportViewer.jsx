@@ -16,7 +16,7 @@ import {
   Edit3,
   ArrowUpDown
 } from 'lucide-react';
-import { formatValue, getT01PctColor, getVoPctColor, getVoYesNoColor } from '../utils/formulaEngine';
+import { formatValue, getT01PctColor, getVoPctColor, getVoYesNoColor, getLakhpatiProgressColor } from '../utils/formulaEngine';
 import { REPORT_THEMES } from '../utils/reportTemplates';
 import ManualDataModal from './ManualDataModal';
 
@@ -38,10 +38,11 @@ export default function ReportViewer({
   const [showManualModal, setShowManualModal] = useState(false);
 
   const theme = REPORT_THEMES[reportMeta.theme] || REPORT_THEMES.ekyc_olive;
-  const isVoIndividual = reportMeta.presetId === 't01_vo_individual' || reportMeta.layoutType === 't01_vo_individual_grid';
-  const isVo = !isVoIndividual && (reportMeta.presetId === 't01_vo_transactions' || reportMeta.layoutType === 't01_vo_grid');
-  const isT01 = !isVoIndividual && !isVo && (reportMeta.presetId === 't01_transactions' || reportMeta.layoutType === 't01_grid');
-  const isEkyc = !isVoIndividual && !isVo && !isT01 && (reportMeta.presetId === 'ekyc_progress' || reportMeta.layoutType === 'ekyc_grid');
+  const isLakhpati = reportMeta.presetId === 'lakhpati_didi' || reportMeta.layoutType === 'lakhpati_grid';
+  const isVoIndividual = !isLakhpati && (reportMeta.presetId === 't01_vo_individual' || reportMeta.layoutType === 't01_vo_individual_grid');
+  const isVo = !isLakhpati && !isVoIndividual && (reportMeta.presetId === 't01_vo_transactions' || reportMeta.layoutType === 't01_vo_grid');
+  const isT01 = !isLakhpati && !isVoIndividual && !isVo && (reportMeta.presetId === 't01_transactions' || reportMeta.layoutType === 't01_grid');
+  const isEkyc = !isLakhpati && !isVoIndividual && !isVo && !isT01 && (reportMeta.presetId === 'ekyc_progress' || reportMeta.layoutType === 'ekyc_grid');
 
   const [sortCol, setSortCol] = useState(reportMeta.sortByCol || '');
   const [sortDir, setSortDir] = useState(reportMeta.sortDir || 'asc');
@@ -218,7 +219,29 @@ export default function ReportViewer({
 
       {/* 2. Official Report Container (Exact image replica) */}
       <div className="bg-white border-2 border-slate-300 shadow-lg rounded-xl overflow-hidden">
-        {isVo || isVoIndividual ? (
+        {isLakhpati ? (
+          <div>
+            {/* Lakhpati Top Title: Red Centered */}
+            <div className="py-2.5 px-4 text-center border-b border-slate-300 bg-white">
+              <h1 className="text-base sm:text-lg font-bold text-[#c00000] tracking-wide">
+                {reportMeta.title || 'Lakhpati Didi Entry Status Report - (Q2 : Jul-sep), 2026-27'}
+              </h1>
+            </div>
+
+            {/* Lakhpati 3-Box Subheader Row: District, Block, Date */}
+            <div className="grid grid-cols-1 md:grid-cols-3 border-b-2 border-slate-400 bg-white text-xs font-bold text-[#c00000]">
+              <div className="py-2 px-3 text-center border-b md:border-b-0 border-r border-slate-300 flex items-center justify-center">
+                <span>District: {reportMeta.district || 'PURBI CHAMPARAN'}</span>
+              </div>
+              <div className="py-2 px-3 text-center border-b md:border-b-0 md:border-r border-slate-300 flex items-center justify-center">
+                <span>Block: {reportMeta.companyName?.replace(/^Block:\s*/i, '').trim() || 'KOTWA'}</span>
+              </div>
+              <div className="py-2 px-3 text-center flex items-center justify-center">
+                <span>Date:-{reportMeta.currentDate || '15-10-2026'}</span>
+              </div>
+            </div>
+          </div>
+        ) : isVo || isVoIndividual ? (
           <div>
             {/* VO Top Title: Red Centered on Gray/Beige Background */}
             <div className="py-2.5 px-4 text-center border-b border-slate-300 bg-slate-200">
@@ -316,7 +339,7 @@ export default function ReportViewer({
                   S.No
                 </th>
                 {columns.map(col => {
-                  const isRedHeader = col.headerColor === '#c00000' || col.header.includes('Gap') || col.header.includes('Not Verified');
+                  const isRedHeader = isLakhpati || col.headerColor === '#c00000' || col.header.includes('Gap') || col.header.includes('Not Verified');
                   const isManual = col.isManualEditable || col.type === 'manual';
                   const isSorted = sortCol === col.header;
 
@@ -382,17 +405,25 @@ export default function ReportViewer({
 
                         // If this column is manual editable, render an inline interactive input!
                         if (isManual) {
-                          const manualVal = manualValues[gpName] !== undefined ? manualValues[gpName] : rawVal;
+                          const manualKeyWithCol = col.id ? `${col.id}_${gpName}` : (col.manualKey ? `${col.manualKey}_${gpName}` : null);
+                          const manualVal = (manualKeyWithCol && manualValues[manualKeyWithCol] !== undefined)
+                            ? manualValues[manualKeyWithCol]
+                            : (manualValues[gpName] !== undefined && !col.id?.startsWith('col_target') && !col.id?.startsWith('col_yesterday'))
+                            ? manualValues[gpName]
+                            : rawVal;
+
+                          const isYesterdayProgress = col.id === 'col_yesterday_progress' || col.manualKey === 'yesterday_progress';
+                          const progressColor = isYesterdayProgress ? getLakhpatiProgressColor(manualVal) : null;
 
                           return (
-                            <td key={col.id} className="border border-slate-300 p-0.5 text-center bg-amber-50/40">
+                            <td key={col.id} className={`border border-slate-300 p-0.5 text-center ${progressColor ? progressColor.bg : 'bg-amber-50/40'}`}>
                               <input
                                 type="number"
                                 value={manualVal === '' ? '' : manualVal}
-                                onChange={(e) => onUpdateSingleManualValue(gpName, e.target.value)}
-                                className="w-full text-right font-mono font-bold bg-transparent hover:bg-white focus:bg-white border border-transparent hover:border-amber-400 focus:border-emerald-500 rounded px-1.5 py-1 text-slate-900 text-xs focus:outline-hidden"
+                                onChange={(e) => onUpdateSingleManualValue(gpName, e.target.value, col.id || col.manualKey)}
+                                className={`w-full text-right font-mono font-bold bg-transparent hover:bg-white focus:bg-white border border-transparent hover:border-amber-400 focus:border-emerald-500 rounded px-1.5 py-1 text-xs focus:outline-hidden ${progressColor ? progressColor.text : 'text-slate-900'}`}
                                 placeholder="0"
-                                title={`Edit previous e-KYC count for ${gpName}`}
+                                title={`Edit ${col.header} for ${gpName}`}
                               />
                             </td>
                           );
@@ -401,7 +432,14 @@ export default function ReportViewer({
                         // Check special cell styles as in the image
                         let cellClass = 'border border-slate-300 py-1.5 px-2 whitespace-nowrap ';
 
-                        if (col.cellStyle === 'vo_yes_no' || (isVoIndividual && col.header.includes('Transactions Captured'))) {
+                        if (col.cellStyle === 'gap_red_highlight' || (isLakhpati && col.header === 'Gap')) {
+                          cellClass += 'bg-[#f87171] text-slate-900 font-bold text-right ';
+                        } else if (col.cellStyle === 'lakhpati_progress_badge' || (isLakhpati && col.header === 'Yesterday Progress')) {
+                          const pMeta = getLakhpatiProgressColor(rawVal);
+                          cellClass += `${pMeta.bg} ${pMeta.text} text-center font-bold `;
+                        } else if (isLakhpati && col.header === '% Gap') {
+                          cellClass += 'text-right font-medium text-[#c00000] ';
+                        } else if (col.cellStyle === 'vo_yes_no' || (isVoIndividual && col.header.includes('Transactions Captured'))) {
                           const colorMeta = getVoYesNoColor(rawVal);
                           cellClass += `${colorMeta.bg} ${colorMeta.text} text-center font-bold `;
                         } else if (isVoIndividual && ['eBK Mobile Number', 'Transaction Start Date', 'Financial Intermediary'].includes(col.header)) {
@@ -449,7 +487,7 @@ export default function ReportViewer({
             {!isVoIndividual && totals && rows.length > 0 && (
               <tfoot className="sticky bottom-0 z-10">
                 <tr className={`font-bold border-t-2 border-slate-400 border-b-2 border-slate-400 ${
-                  isVo || isT01 ? 'bg-rose-100/80 text-slate-900' : 'bg-white text-[#c00000]'
+                  isLakhpati ? 'bg-white text-slate-900' : isVo || isT01 ? 'bg-rose-100/80 text-slate-900' : 'bg-white text-[#c00000]'
                 }`}>
                   <td className="py-2 px-2 text-center border border-slate-300">
                     —
@@ -470,7 +508,7 @@ export default function ReportViewer({
                         key={col.id}
                         className={`py-2 px-2 border border-slate-300 whitespace-nowrap ${
                           isFirst ? 'text-center font-extrabold text-sm' : 'text-right font-bold'
-                        }`}
+                        } ${isLakhpati && col.header === 'Gap' ? 'bg-[#f87171]' : ''}`}
                       >
                         {displayVal}
                       </td>

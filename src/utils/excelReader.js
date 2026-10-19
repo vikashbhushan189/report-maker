@@ -126,6 +126,9 @@ export function extractSheetData(workbook, sheetName) {
     } else if (rowStr.toLowerCase().includes('transactions monitoring') || rowStr.toLowerCase().includes('t01')) {
       metadata.title = 'T01 - SHG Transactions Monitoring Status';
       metadata.reportType = 't01';
+    } else if (rowStr.toLowerCase().includes('digital aajeevika register') || rowStr.toLowerCase().includes('lakhpati didi') || rowStr.toLowerCase().includes('a02')) {
+      metadata.title = 'Lakhpati Didi Entry Status Report - (Q2 : Jul-sep), 2026-27';
+      metadata.reportType = 'lakhpati_didi';
     } else if (rowStr.toLowerCase().includes('member kyc details')) {
       metadata.title = 'S01 - Member KYC Details';
       metadata.reportType = 's01';

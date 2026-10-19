@@ -52,6 +52,19 @@ export const REPORT_THEMES = {
     summaryText: '#1e293b',
     borderColor: '#cbd5e1',
     badgeClass: 'bg-slate-100 text-slate-800 border-slate-300'
+  },
+  lakhpati_yellow: {
+    id: 'lakhpati_yellow',
+    name: 'Lakhpati Didi Gold Yellow',
+    primaryColor: '#ffff00', // Vibrant yellow header from official image
+    primaryColorDark: '#eab308',
+    accentBg: '#fefce8',
+    headerText: '#c00000', // Bold red header text as in image
+    titleColor: '#c00000', // Bold red title
+    summaryBg: '#ffffff',
+    summaryText: '#000000', // Bold black summary text as in image
+    borderColor: '#94a3b8',
+    badgeClass: 'bg-yellow-100 text-yellow-800 border-yellow-300'
   }
 };
 
@@ -387,7 +400,115 @@ export function generateEkycColumns(yesterdayDate = '12-10-2026', dayBeforeYeste
   ];
 }
 
+/**
+ * Dynamically builds column definitions for Lakhpati Didi Entry Status Report
+ */
+export function generateLakhpatiColumns() {
+  return [
+    {
+      id: 'col_gp',
+      header: 'Gram Panchayat',
+      type: 'source',
+      sourceCol: 'Gram Panchayat',
+      format: 'text',
+      summaryOp: 'none'
+    },
+    {
+      id: 'col_active_didis',
+      header: 'Active Approved Potential Didis',
+      type: 'source',
+      sourceCol: 'Active Approved Potential Lakhpati Didi',
+      fallbackCol: 'Active Approved Potential Didis',
+      format: 'number',
+      summaryOp: 'sum'
+    },
+    {
+      id: 'col_target',
+      header: 'Target',
+      type: 'manual',
+      isManualEditable: true,
+      manualKey: 'target',
+      sourceCol: 'Target',
+      fallbackCol: 'Target',
+      format: 'number',
+      summaryOp: 'sum',
+      helpText: 'Click or type to edit target for this Panchayat'
+    },
+    {
+      id: 'col_total_entry',
+      header: 'Total Entry',
+      type: 'source',
+      sourceCol: 'Aajeevika Register for Potential Lakhpati Didi PLD Entered',
+      fallbackCol: 'Total Entry',
+      format: 'number',
+      summaryOp: 'sum',
+      cellStyle: 'entry_data_bar'
+    },
+    {
+      id: 'col_pct_entry',
+      header: '% Entry',
+      type: 'formula',
+      formula: 'IF([Target] > 0, ([Total Entry] / [Target]) * 100, 0)',
+      format: 'percent',
+      summaryOp: 'weighted_pct_lakhpati_entry',
+      cellStyle: 'pct_entry'
+    },
+    {
+      id: 'col_gap',
+      header: 'Gap',
+      type: 'formula',
+      formula: '[Target] - [Total Entry]',
+      format: 'number',
+      summaryOp: 'sum',
+      cellStyle: 'gap_red_highlight',
+      headerColor: '#c00000'
+    },
+    {
+      id: 'col_pct_gap',
+      header: '% Gap',
+      type: 'formula',
+      formula: 'IF([Target] > 0, ([Gap] / [Target]) * 100, 0)',
+      format: 'percent',
+      summaryOp: 'weighted_pct_lakhpati_gap',
+      cellStyle: 'pct_gap',
+      headerColor: '#c00000'
+    },
+    {
+      id: 'col_yesterday_progress',
+      header: 'Yesterday Progress',
+      type: 'manual',
+      isManualEditable: true,
+      manualKey: 'yesterday_progress',
+      sourceCol: 'Yesterday Progress',
+      fallbackCol: 'Yesterday Progress',
+      format: 'integer',
+      summaryOp: 'sum',
+      cellStyle: 'lakhpati_progress_badge',
+      helpText: 'Click or type to edit yesterday progress'
+    }
+  ];
+}
+
 export const REPORT_TOPICS = [
+  {
+    id: 'lakhpati_didi',
+    topicName: 'Lakhpati Didi Entry Status Report - (Q2 : Jul-sep), 2026-27',
+    badge: 'Official Lakhpati Didi Format',
+    isPrimary: false,
+    title: 'Lakhpati Didi Entry Status Report - (Q2 : Jul-sep), 2026-27',
+    subtitle: 'Lakhpati Didi Entry Status Report - (Q2 : Jul-sep), 2026-27',
+    companyName: 'Block: KOTWA',
+    district: 'PURBI CHAMPARAN',
+    block: 'KOTWA',
+    dateLabel: 'Date:-15-10-2026',
+    currentDate: '15-10-2026',
+    theme: 'lakhpati_yellow',
+    layoutType: 'lakhpati_grid',
+    sortByCol: 'Gap',
+    sortDir: 'desc',
+    description: 'Official Lakhpati Didi Entry Status format: Tracks Active Potential Didis, Targets (editable inline), Total Entry, % Entry, Gap ranking, % Gap, and Yesterday Progress (editable & color coded).',
+    columns: generateLakhpatiColumns()
+  },
   {
     id: 't01_transactions',
     topicName: 'T01 - SHG Transactions Monitoring Status (Official Image Format)',

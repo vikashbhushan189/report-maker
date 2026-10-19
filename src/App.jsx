@@ -7,7 +7,7 @@ import ReportViewer from './components/ReportViewer';
 import SplitView from './components/SplitView';
 import { SAMPLE_DATASETS } from './utils/sampleData';
 import { parseExcelFile, parseRawText, extractSheetData, analyzeColumns } from './utils/excelReader';
-import { REPORT_TOPICS, REPORT_THEMES, detectT01Months, detectVoMonths, detectVoIndividualMonths, generateT01Columns, generateVoColumns, generateVoIndividualColumns, generateEkycColumns, getPreviousDate } from './utils/reportTemplates';
+import { REPORT_TOPICS, REPORT_THEMES, detectT01Months, detectVoMonths, detectVoIndividualMonths, generateT01Columns, generateVoColumns, generateVoIndividualColumns, generateLakhpatiColumns, generateEkycColumns, getPreviousDate } from './utils/reportTemplates';
 import { generateReportData } from './utils/formulaEngine';
 import { exportToStyledExcel, exportToCSV } from './utils/excelExporter';
 import { CheckCircle2, AlertCircle } from 'lucide-react';
@@ -120,12 +120,15 @@ export default function App() {
     const topic = REPORT_TOPICS.find(t => t.id === topicId) || REPORT_TOPICS[0];
     setSelectedTopicId(topic.id);
 
+    const isLakhpati = topic.id === 'lakhpati_didi';
     const isVoIndividual = topic.id === 't01_vo_individual';
     const isVo = topic.id === 't01_vo_transactions';
     const isEkyc = topic.id === 'ekyc_progress';
     const isT01 = topic.id === 't01_transactions';
 
-    const defaultDateLabel = isVoIndividual
+    const defaultDateLabel = isLakhpati
+      ? (topic.dateLabel || 'Date:-15-10-2026')
+      : isVoIndividual
       ? (topic.dateLabel || 'Date:-12-10-2026')
       : isVo
       ? (topic.dateLabel || 'Date:-13-10-2026')
@@ -145,16 +148,22 @@ export default function App() {
       yesterdayDate: prev.yesterdayDate || topic.yesterdayDate || '12-10-2026',
       dayBeforeYesterdayDate: prev.dayBeforeYesterdayDate || topic.dayBeforeYesterdayDate || '10-10-2026',
       dateLabel: defaultDateLabel,
-      currentDate: isVoIndividual ? (topic.currentDate || '12-10-2026') : isVo ? (topic.currentDate || '13-10-2026') : isT01 ? (topic.currentDate || '10-10-2026') : (prev.todayDate || '13-10-2026'),
-      prevDate: isVoIndividual ? '10-10-2026' : isVo ? '10-10-2026' : isT01 ? (topic.prevDate || '10-10-2026') : (prev.yesterdayDate || '12-10-2026'),
-      theme: topic.theme || 'ekyc_olive',
-      layoutType: topic.layoutType || (isVoIndividual ? 't01_vo_individual_grid' : isVo ? 't01_vo_grid' : isT01 ? 't01_grid' : 'ekyc_grid'),
+      currentDate: isLakhpati ? (topic.currentDate || '15-10-2026') : isVoIndividual ? (topic.currentDate || '12-10-2026') : isVo ? (topic.currentDate || '13-10-2026') : isT01 ? (topic.currentDate || '10-10-2026') : (prev.todayDate || '13-10-2026'),
+      prevDate: isLakhpati ? '14-10-2026' : isVoIndividual ? '10-10-2026' : isVo ? '10-10-2026' : isT01 ? (topic.prevDate || '10-10-2026') : (prev.yesterdayDate || '12-10-2026'),
+      theme: topic.theme || (isLakhpati ? 'lakhpati_yellow' : 'ekyc_olive'),
+      layoutType: topic.layoutType || (isLakhpati ? 'lakhpati_grid' : isVoIndividual ? 't01_vo_individual_grid' : isVo ? 't01_vo_grid' : isT01 ? 't01_grid' : 'ekyc_grid'),
       sortByCol: topic.sortByCol || '',
       sortDir: topic.sortDir || 'asc',
       downloadInfo: topic.downloadInfo || prev.downloadInfo
     }));
 
-    if (isVoIndividual) {
+    if (isLakhpati) {
+      setColumns(generateLakhpatiColumns());
+      if (!fileInfo || !fileInfo.headers.some(h => h.includes('Potential Lakhpati Didi') || h.includes('Active Approved Potential Didis'))) {
+        loadDataset('lakhpati_didi');
+        return;
+      }
+    } else if (isVoIndividual) {
       const allM = topic.allMonths || ['March 2026', 'February 2026', 'January 2026'];
       const defM = topic.defaultMonths || ['March 2026'];
       setAvailableMonths(allM);
@@ -274,19 +283,42 @@ export default function App() {
   const applyParsedData = (parsed, displayName) => {
     setFileInfo(parsed);
 
+    // Check if uploaded data is Lakhpati Didi / Aajeevika Register
+    const isLakhpatiData = parsed.metadata?.reportType === 'lakhpati_didi' ||
+      parsed.headers.some(h => h.includes('Potential Lakhpati Didi') || h.includes('Aajeevika Register') || h.includes('Active Approved Potential Didis'));
+
     // Check if uploaded data is VO Individual
-    const isVoIndividualData = parsed.metadata?.reportType === 't01_vo_individual' ||
-      parsed.headers.some(h => h.includes('VO Name') || h.includes('eBK Name') || h.includes('Financial Intermediary'));
+    const isVoIndividualData = !isLakhpatiData && (parsed.metadata?.reportType === 't01_vo_individual' ||
+      parsed.headers.some(h => h.includes('VO Name') || h.includes('eBK Name') || h.includes('Financial Intermediary')));
 
     // Check if uploaded data is VO transactions (CLF Wise)
-    const isVoData = !isVoIndividualData && (parsed.metadata?.reportType === 't01_vo' ||
+    const isVoData = !isLakhpatiData && !isVoIndividualData && (parsed.metadata?.reportType === 't01_vo' ||
       parsed.headers.some(h => h.includes('Total VOs') || h.includes('CLF Name') || h.includes('VOs Financial-Intermediary')));
 
     // Check if uploaded data is T01 SHG
-    const isT01Data = !isVoIndividualData && !isVoData && ((parsed.detectedMonths && parsed.detectedMonths.length > 0) ||
+    const isT01Data = !isLakhpatiData && !isVoIndividualData && !isVoData && ((parsed.detectedMonths && parsed.detectedMonths.length > 0) ||
       parsed.headers.some(h => h.includes('Total SHGs') || h.includes('Transactions Captured')));
 
-    if (isVoIndividualData) {
+    if (isLakhpatiData) {
+      setSelectedTopicId('lakhpati_didi');
+      setReportMeta(prev => ({
+        ...prev,
+        presetId: 'lakhpati_didi',
+        title: 'Lakhpati Didi Entry Status Report - (Q2 : Jul-sep), 2026-27',
+        subtitle: 'Lakhpati Didi Entry Status Report - (Q2 : Jul-sep), 2026-27',
+        district: parsed.metadata?.district || 'PURBI CHAMPARAN',
+        companyName: `Block: ${parsed.metadata?.block || 'KOTWA'}`,
+        panchayat: 'All Panchayats',
+        dateLabel: 'Date:-15-10-2026',
+        currentDate: '15-10-2026',
+        theme: 'lakhpati_yellow',
+        layoutType: 'lakhpati_grid',
+        sortByCol: 'Gap',
+        sortDir: 'desc',
+        downloadInfo: parsed.metadata?.downloadInfo || prev.downloadInfo
+      }));
+      setColumns(generateLakhpatiColumns());
+    } else if (isVoIndividualData) {
       const months = parsed.detectedMonths && parsed.detectedMonths.length > 0
         ? parsed.detectedMonths
         : detectVoIndividualMonths(parsed.headers);
@@ -427,9 +459,10 @@ export default function App() {
     showToast('Updated previous day e-KYC values & recalculated progress!');
   };
 
-  const handleUpdateSingleManualValue = (gpName, val) => {
+  const handleUpdateSingleManualValue = (gpName, val, colKey = null) => {
     setManualValues(prev => {
-      const updated = { ...prev, [gpName]: val === '' ? '' : Number(val) };
+      const keyToUse = colKey ? `${colKey}_${gpName}` : gpName;
+      const updated = { ...prev, [keyToUse]: val === '' ? '' : Number(val) };
       try {
         localStorage.setItem('manual_ekyc_prev_data', JSON.stringify(updated));
       } catch (e) {}
