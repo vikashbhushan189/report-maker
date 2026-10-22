@@ -247,6 +247,32 @@ export function generateReportData(
             const clean = Number(rawVal.replace(/,/g, '').trim());
             rawVal = isNaN(clean) ? 0 : clean;
           }
+        } else if (col.id === 'col_ent_prepared' || col.header === 'Total SHG Prepared ENT Plan') {
+          if (rawRow['Total SHG Prepared ENT Plan'] !== undefined && rawRow['Total SHG Prepared ENT Plan'] !== '') {
+            rawVal = rawRow['Total SHG Prepared ENT Plan'];
+          } else if (rawRow['Total SHG prepared Entitlement Plan'] !== undefined && rawRow['Total SHG prepared Entitlement Plan'] !== '') {
+            rawVal = rawRow['Total SHG prepared Entitlement Plan'];
+          } else {
+            const matchedKey = Object.keys(rawRow).find(k => /(?:prepared|submitted).*ent/i.test(k) || /ent.*(?:prepared|submitted)/i.test(k) || (/entitlement/i.test(k) && !/%/i.test(k) && !/gap/i.test(k)));
+            rawVal = matchedKey ? rawRow[matchedKey] : 0;
+          }
+          if (typeof rawVal === 'string') {
+            const clean = Number(rawVal.replace(/,/g, '').trim());
+            rawVal = isNaN(clean) ? 0 : clean;
+          }
+        } else if (col.id === 'col_lh_prepared' || col.header === 'Total SHG Prepared LH Plan') {
+          if (rawRow['Total SHG Prepared LH Plan'] !== undefined && rawRow['Total SHG Prepared LH Plan'] !== '') {
+            rawVal = rawRow['Total SHG Prepared LH Plan'];
+          } else if (rawRow['Total SHG prepared Livelihood Plan'] !== undefined && rawRow['Total SHG prepared Livelihood Plan'] !== '') {
+            rawVal = rawRow['Total SHG prepared Livelihood Plan'];
+          } else {
+            const matchedKey = Object.keys(rawRow).find(k => /(?:prepared|submitted).*lh/i.test(k) || /lh.*(?:prepared|submitted)/i.test(k) || (/livelihood/i.test(k) && !/%/i.test(k) && !/gap/i.test(k)));
+            rawVal = matchedKey ? rawRow[matchedKey] : 0;
+          }
+          if (typeof rawVal === 'string') {
+            const clean = Number(rawVal.replace(/,/g, '').trim());
+            rawVal = isNaN(clean) ? 0 : clean;
+          }
         } else if (rawRow[col.sourceCol] !== undefined && rawRow[col.sourceCol] !== '') {
           rawVal = rawRow[col.sourceCol];
         } else if (col.fallbackCol && rawRow[col.fallbackCol] !== undefined && rawRow[col.fallbackCol] !== '') {
@@ -415,6 +441,22 @@ export function generateReportData(
     }
     if (gapTotal !== undefined) {
       totals['% Gap'] = (Number(gapTotal) / Number(targetTotal)) * 100;
+    }
+  }
+
+  // 8. Weighted Percentage Totals for VPRP Entry Columns (% Entitlement & % Livelihood)
+  const totalShgVprp = totals['Total SHG'] ?? totals['Total SHGs'];
+  const totalEntPrepared = totals['Total SHG Prepared ENT Plan'];
+  const totalLhPrepared = totals['Total SHG Prepared LH Plan'];
+
+  if (totalShgVprp && Number(totalShgVprp) > 0) {
+    if (totalEntPrepared !== undefined) {
+      totals['% of SHG prepared Entitlement Plan'] = (Number(totalEntPrepared) / Number(totalShgVprp)) * 100;
+      totals['Entitlement Plan Gap'] = Number(totalShgVprp) - Number(totalEntPrepared);
+    }
+    if (totalLhPrepared !== undefined) {
+      totals['% of SHG prepared Livelihood Plan'] = (Number(totalLhPrepared) / Number(totalShgVprp)) * 100;
+      totals['Livelihood Plan Gap'] = Number(totalShgVprp) - Number(totalLhPrepared);
     }
   }
 

@@ -31,10 +31,11 @@ export async function exportToStyledExcel({
   const theme = REPORT_THEMES[reportMeta.theme] || REPORT_THEMES.ekyc_olive;
   const isP01 = reportMeta.presetId === 'p01_shg_households' || reportMeta.layoutType === 'p01_grid';
   const isLakhpati = !isP01 && (reportMeta.presetId === 'lakhpati_didi' || reportMeta.layoutType === 'lakhpati_grid');
-  const isVoIndividual = !isP01 && !isLakhpati && (reportMeta.presetId === 't01_vo_individual' || reportMeta.layoutType === 't01_vo_individual_grid');
-  const isVo = !isP01 && !isLakhpati && !isVoIndividual && (reportMeta.presetId === 't01_vo_transactions' || reportMeta.layoutType === 't01_vo_grid');
-  const isT01 = !isP01 && !isLakhpati && !isVoIndividual && !isVo && (reportMeta.presetId === 't01_transactions' || reportMeta.layoutType === 't01_grid');
-  const isEkyc = !isP01 && !isLakhpati && !isVoIndividual && !isVo && !isT01 && (reportMeta.presetId === 'ekyc_progress' || reportMeta.layoutType === 'ekyc_grid');
+  const isVprp = !isP01 && !isLakhpati && (reportMeta.presetId === 'vprp_entry' || reportMeta.layoutType === 'vprp_grid');
+  const isVoIndividual = !isP01 && !isLakhpati && !isVprp && (reportMeta.presetId === 't01_vo_individual' || reportMeta.layoutType === 't01_vo_individual_grid');
+  const isVo = !isP01 && !isLakhpati && !isVprp && !isVoIndividual && (reportMeta.presetId === 't01_vo_transactions' || reportMeta.layoutType === 't01_vo_grid');
+  const isT01 = !isP01 && !isLakhpati && !isVprp && !isVoIndividual && !isVo && (reportMeta.presetId === 't01_transactions' || reportMeta.layoutType === 't01_grid');
+  const isEkyc = !isP01 && !isLakhpati && !isVprp && !isVoIndividual && !isVo && !isT01 && (reportMeta.presetId === 'ekyc_progress' || reportMeta.layoutType === 'ekyc_grid');
 
   const workbook = new ExcelJS.Workbook();
   workbook.creator = 'Report Studio';
@@ -42,7 +43,7 @@ export async function exportToStyledExcel({
   workbook.created = new Date();
   workbook.modified = new Date();
 
-  const sheetName = isP01 ? 'SHGs and Households' : (isLakhpati ? 'Lakhpati Didi Status Report' : (isVoIndividual ? 'VO Monitoring Status' : (isVo ? 'VO Transactions Report' : (isT01 ? 'SHG Transactions Report' : (isEkyc ? 'KYC Progress Report' : 'Report')))));
+  const sheetName = isP01 ? 'SHGs and Households' : (isLakhpati ? 'Lakhpati Didi Status Report' : (isVprp ? 'VPRP Entry Status Report' : (isVoIndividual ? 'VO Monitoring Status' : (isVo ? 'VO Transactions Report' : (isT01 ? 'SHG Transactions Report' : (isEkyc ? 'KYC Progress Report' : 'Report'))))));
   const sheet = workbook.addWorksheet(sheetName, {
     views: [{ showGridLines: true }],
     pageSetup: { orientation: 'landscape', fitToPage: true, fitToWidth: 1 }
@@ -204,6 +205,27 @@ export async function exportToStyledExcel({
         pattern: 'solid',
         fgColor: { argb: 'FFFFFFFF' }
       };
+    }
+    currentRowIdx++;
+  } else if (isVprp) {
+    // ----------------------------------------------------
+    // 1. VPRP HEADER: Title Banner (Row 1) - Single Title Row as in Official Image
+    // ----------------------------------------------------
+    const titleRow = sheet.getRow(currentRowIdx);
+    titleRow.values = [reportMeta.title || 'VPRP ENTRY STATUS REPORT, 22-10-2026'];
+    titleRow.height = 28;
+    titleRow.font = { name: 'Calibri', size: 14, bold: true, color: { argb: 'FFC00000' } };
+    titleRow.alignment = { vertical: 'middle', horizontal: 'center' };
+    sheet.mergeCells(currentRowIdx, 1, currentRowIdx, totalColsCount);
+
+    const titleCell = sheet.getCell(currentRowIdx, 1);
+    titleCell.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFFFFFFF' }
+    };
+    for (let c = 1; c <= totalColsCount; c++) {
+      sheet.getCell(currentRowIdx, c).border = borderThin;
     }
     currentRowIdx++;
   } else if (isVo || isVoIndividual) {
@@ -405,7 +427,7 @@ export async function exportToStyledExcel({
   headerRow.values = ['S.NO', ...columns.map(col => col.header)];
   headerRow.height = 36;
 
-  const headerBgArgb = isLakhpati ? 'FFFFFF00' : hexToArgb(theme.primaryColor || '#c5d9a4');
+  const headerBgArgb = (isLakhpati || isVprp) ? 'FFFFFF00' : hexToArgb(theme.primaryColor || '#c5d9a4');
 
   headerRow.eachCell((cell, colIdx) => {
     cell.fill = {
@@ -415,7 +437,7 @@ export async function exportToStyledExcel({
     };
 
     const colObj = colIdx > 1 ? columns[colIdx - 2] : null;
-    const isRed = isLakhpati || (colObj && (colObj.headerColor === '#c00000' || colObj.header.includes('Gap') || colObj.header.includes('Not Verified')));
+    const isRed = (isLakhpati || isVprp) || (colObj && (colObj.headerColor === '#c00000' || colObj.header.includes('Gap') || colObj.header.includes('Not Verified')));
 
     cell.font = {
       name: 'Calibri',
@@ -426,7 +448,7 @@ export async function exportToStyledExcel({
     cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
     cell.border = borderThin;
   });
-  if (isLakhpati) {
+  if (isLakhpati || isVprp) {
     try {
       sheet.autoFilter = {
         from: { row: headerRowIdx, column: 1 },
@@ -607,6 +629,71 @@ export async function exportToStyledExcel({
             colCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: progressColor.excelArgb } };
             colCell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: progressColor.excelFontColor || 'FF000000' } };
           }
+          return;
+        }
+      }
+
+      // --------------------------------------------------
+      // CELL STYLING FOR VPRP ENTRY STATUS
+      // --------------------------------------------------
+      if (isVprp) {
+        const colTotalShg = colLetterMap['Total SHG'];
+        const colEntPrep = colLetterMap['Total SHG Prepared ENT Plan'];
+        const colLhPrep = colLetterMap['Total SHG Prepared LH Plan'];
+
+        if (col.header === 'Gram Panchayat') {
+          colCell.value = rawVal || '';
+          colCell.alignment = { vertical: 'middle', horizontal: 'left' };
+          colCell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FF000000' } };
+          return;
+        }
+
+        if (['Total SHG', 'Total VO', 'Total CLF', 'Total GP', 'Total SHG Prepared ENT Plan', 'Total SHG Prepared LH Plan'].includes(col.header)) {
+          colCell.value = isNaN(numVal) ? (rawVal || 0) : numVal;
+          colCell.numFmt = '#,##0';
+          colCell.alignment = { vertical: 'middle', horizontal: 'right' };
+          return;
+        }
+
+        if (col.header === '% of SHG prepared Entitlement Plan' && colTotalShg && colEntPrep) {
+          colCell.value = {
+            formula: `IF(${colTotalShg}${currentRowIdx}>0, ${colEntPrep}${currentRowIdx}/${colTotalShg}${currentRowIdx}, 0)`,
+            result: isNaN(numVal) ? 0 : numVal / 100
+          };
+          colCell.numFmt = '0.00%';
+          colCell.alignment = { vertical: 'middle', horizontal: 'right' };
+          return;
+        }
+
+        if (col.header === 'Entitlement Plan Gap' && colTotalShg && colEntPrep) {
+          colCell.value = {
+            formula: `${colTotalShg}${currentRowIdx}-${colEntPrep}${currentRowIdx}`,
+            result: isNaN(numVal) ? 0 : numVal
+          };
+          colCell.numFmt = '#,##0';
+          colCell.alignment = { vertical: 'middle', horizontal: 'right' };
+          colCell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FF000000' } };
+          return;
+        }
+
+        if (col.header === '% of SHG prepared Livelihood Plan' && colTotalShg && colLhPrep) {
+          colCell.value = {
+            formula: `IF(${colTotalShg}${currentRowIdx}>0, ${colLhPrep}${currentRowIdx}/${colTotalShg}${currentRowIdx}, 0)`,
+            result: isNaN(numVal) ? 0 : numVal / 100
+          };
+          colCell.numFmt = '0.00%';
+          colCell.alignment = { vertical: 'middle', horizontal: 'right' };
+          return;
+        }
+
+        if (col.header === 'Livelihood Plan Gap' && colTotalShg && colLhPrep) {
+          colCell.value = {
+            formula: `${colTotalShg}${currentRowIdx}-${colLhPrep}${currentRowIdx}`,
+            result: isNaN(numVal) ? 0 : numVal
+          };
+          colCell.numFmt = '#,##0';
+          colCell.alignment = { vertical: 'middle', horizontal: 'right' };
+          colCell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FF000000' } };
           return;
         }
       }
@@ -1006,6 +1093,63 @@ export async function exportToStyledExcel({
       }
 
       // --------------------------------------------------
+      // TOTAL FORMULAS FOR VPRP ENTRY STATUS REPORT
+      // --------------------------------------------------
+      if (isVprp) {
+        const colTotalShg = colLetterMap['Total SHG'];
+        const colEntPrep = colLetterMap['Total SHG Prepared ENT Plan'];
+        const colLhPrep = colLetterMap['Total SHG Prepared LH Plan'];
+
+        if (col.header === '% of SHG prepared Entitlement Plan' && colTotalShg && colEntPrep) {
+          colCell.value = {
+            formula: `IF(${colTotalShg}${totalRowIdx}>0, ${colEntPrep}${totalRowIdx}/${colTotalShg}${totalRowIdx}, 0)`,
+            result: isNaN(numTotal) ? 0 : numTotal / 100
+          };
+          colCell.numFmt = '0.00%';
+          colCell.alignment = { vertical: 'middle', horizontal: 'right' };
+          return;
+        }
+
+        if (col.header === 'Entitlement Plan Gap' && colTotalShg && colEntPrep) {
+          colCell.value = {
+            formula: `${colTotalShg}${totalRowIdx}-${colEntPrep}${totalRowIdx}`,
+            result: isNaN(numTotal) ? 0 : numTotal
+          };
+          colCell.numFmt = '#,##0';
+          colCell.alignment = { vertical: 'middle', horizontal: 'right' };
+          return;
+        }
+
+        if (col.header === '% of SHG prepared Livelihood Plan' && colTotalShg && colLhPrep) {
+          colCell.value = {
+            formula: `IF(${colTotalShg}${totalRowIdx}>0, ${colLhPrep}${totalRowIdx}/${colTotalShg}${totalRowIdx}, 0)`,
+            result: isNaN(numTotal) ? 0 : numTotal / 100
+          };
+          colCell.numFmt = '0.00%';
+          colCell.alignment = { vertical: 'middle', horizontal: 'right' };
+          return;
+        }
+
+        if (col.header === 'Livelihood Plan Gap' && colTotalShg && colLhPrep) {
+          colCell.value = {
+            formula: `${colTotalShg}${totalRowIdx}-${colLhPrep}${totalRowIdx}`,
+            result: isNaN(numTotal) ? 0 : numTotal
+          };
+          colCell.numFmt = '#,##0';
+          colCell.alignment = { vertical: 'middle', horizontal: 'right' };
+          return;
+        }
+
+        colCell.value = {
+          formula: `SUM(${colLetter}${firstDataRowIdx}:${colLetter}${lastDataRowIdx})`,
+          result: isNaN(numTotal) ? 0 : numTotal
+        };
+        colCell.numFmt = '#,##0';
+        colCell.alignment = { vertical: 'middle', horizontal: 'right' };
+        return;
+      }
+
+      // --------------------------------------------------
       // TOTAL FORMULAS FOR VO (VO Transactions)
       // --------------------------------------------------
       if (isVo) {
@@ -1237,6 +1381,88 @@ export async function exportToStyledExcel({
         });
       } catch (e) {
         console.warn('IconSet formatting failed for % Gap', e);
+      }
+    }
+  }
+
+  // ----------------------------------------------------
+  // Excel Conditional Formatting Rules for VPRP Entry Report
+  // ----------------------------------------------------
+  if (isVprp && lastDataRowIdx >= firstDataRowIdx) {
+    const colEntPrep = colLetterMap['Total SHG Prepared ENT Plan'];
+    const colEntGap = colLetterMap['Entitlement Plan Gap'];
+    const colLhPrep = colLetterMap['Total SHG Prepared LH Plan'];
+    const colLhGap = colLetterMap['Livelihood Plan Gap'];
+
+    // 1. Total SHG Prepared ENT Plan: Native Soft Green Data Bar
+    if (colEntPrep) {
+      try {
+        sheet.addConditionalFormatting({
+          ref: `${colEntPrep}${firstDataRowIdx}:${colEntPrep}${lastDataRowIdx}`,
+          rules: [
+            {
+              type: 'dataBar',
+              cfvo: [{ type: 'min' }, { type: 'max' }],
+              color: { argb: 'FF63BE7B' }
+            }
+          ]
+        });
+      } catch (e) {
+        console.warn('DataBar formatting failed for ENT Prepared', e);
+      }
+    }
+
+    // 2. Entitlement Plan Gap: Native Soft Red Data Bar
+    if (colEntGap) {
+      try {
+        sheet.addConditionalFormatting({
+          ref: `${colEntGap}${firstDataRowIdx}:${colEntGap}${lastDataRowIdx}`,
+          rules: [
+            {
+              type: 'dataBar',
+              cfvo: [{ type: 'min' }, { type: 'max' }],
+              color: { argb: 'FFF87171' }
+            }
+          ]
+        });
+      } catch (e) {
+        console.warn('DataBar formatting failed for ENT Gap', e);
+      }
+    }
+
+    // 3. Total SHG Prepared LH Plan: Native Soft Green Data Bar
+    if (colLhPrep) {
+      try {
+        sheet.addConditionalFormatting({
+          ref: `${colLhPrep}${firstDataRowIdx}:${colLhPrep}${lastDataRowIdx}`,
+          rules: [
+            {
+              type: 'dataBar',
+              cfvo: [{ type: 'min' }, { type: 'max' }],
+              color: { argb: 'FF63BE7B' }
+            }
+          ]
+        });
+      } catch (e) {
+        console.warn('DataBar formatting failed for LH Prepared', e);
+      }
+    }
+
+    // 4. Livelihood Plan Gap: Native Soft Red Data Bar
+    if (colLhGap) {
+      try {
+        sheet.addConditionalFormatting({
+          ref: `${colLhGap}${firstDataRowIdx}:${colLhGap}${lastDataRowIdx}`,
+          rules: [
+            {
+              type: 'dataBar',
+              cfvo: [{ type: 'min' }, { type: 'max' }],
+              color: { argb: 'FFF87171' }
+            }
+          ]
+        });
+      } catch (e) {
+        console.warn('DataBar formatting failed for LH Gap', e);
       }
     }
   }

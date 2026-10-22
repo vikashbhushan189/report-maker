@@ -144,6 +144,15 @@ export function extractSheetData(workbook, sheetName) {
     ) {
       metadata.title = 'Lakhpati Didi Entry Status Report - (Q2 : Jul-sep), 2026-27';
       metadata.reportType = 'lakhpati_didi';
+    } else if (
+      rowStr.toLowerCase().includes('vprp') ||
+      rowStr.toLowerCase().includes('entitlement plan') ||
+      rowStr.toLowerCase().includes('livelihood plan') ||
+      (rowStr.toLowerCase().includes('total clf') && rowStr.toLowerCase().includes('total gp')) ||
+      (rowStr.toLowerCase().includes('total nof') && rowStr.toLowerCase().includes('total gp'))
+    ) {
+      metadata.title = 'VPRP ENTRY STATUS REPORT, 22-10-2026';
+      metadata.reportType = 'vprp_entry';
     } else if (rowStr.toLowerCase().includes('member kyc details')) {
       metadata.title = 'S01 - Member KYC Details';
       metadata.reportType = 's01';

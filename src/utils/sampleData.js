@@ -983,6 +983,51 @@ export const SAMPLE_DATASETS = {
     ]
   },
 
+  vprp_entry: {
+    name: 'VPRP Entry Status Report (16 Panchayats)',
+    description: 'Kotwa Block: 16 Gram Panchayats tracking Total SHG, VO, CLF, GP, Entitlement Plan Prepared, Entitlement Plan Gap, Livelihood Plan Prepared and Gap.',
+    filename: 'VPRP_Entry_Status_Report_Kotwa.xlsx',
+    defaultPreset: 'vprp_entry',
+    meta: {
+      block: 'KOTWA',
+      district: 'PURBI CHAMPARAN',
+      state: 'BIHAR',
+      date: '22-10-2026'
+    },
+    portalTotals: {
+      excelRow: 4,
+      'Gram Panchayat': 'Total',
+      'Total SHG': 2039,
+      'Total VO': 169,
+      'Total CLF': 0,
+      'Total GP': 16,
+      'Total SHG Prepared ENT Plan': 164,
+      '% of SHG prepared Entitlement Plan': 8.04,
+      'Entitlement Plan Gap': 1875,
+      'Total SHG Prepared LH Plan': 0,
+      '% of SHG prepared Livelihood Plan': 0.0,
+      'Livelihood Plan Gap': 2039
+    },
+    data: [
+      { _excelRowNumber: 5, _sno: 1, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'KOTWA', 'Gram Panchayat': 'MACHHARGAWA', 'Total SHG': 202, 'Total VO': 18, 'Total CLF': 0, 'Total GP': 1, 'Total SHG Prepared ENT Plan': 0, 'Total SHG Prepared LH Plan': 0 },
+      { _excelRowNumber: 6, _sno: 2, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'KOTWA', 'Gram Panchayat': 'MAHARANI BHOPTA', 'Total SHG': 177, 'Total VO': 14, 'Total CLF': 0, 'Total GP': 1, 'Total SHG Prepared ENT Plan': 0, 'Total SHG Prepared LH Plan': 0 },
+      { _excelRowNumber: 7, _sno: 3, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'KOTWA', 'Gram Panchayat': 'KARARIYA', 'Total SHG': 168, 'Total VO': 14, 'Total CLF': 0, 'Total GP': 1, 'Total SHG Prepared ENT Plan': 0, 'Total SHG Prepared LH Plan': 0 },
+      { _excelRowNumber: 8, _sno: 4, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'KOTWA', 'Gram Panchayat': 'AHIRAULIYA', 'Total SHG': 143, 'Total VO': 11, 'Total CLF': 0, 'Total GP': 1, 'Total SHG Prepared ENT Plan': 0, 'Total SHG Prepared LH Plan': 0 },
+      { _excelRowNumber: 9, _sno: 5, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'KOTWA', 'Gram Panchayat': 'JASAULI', 'Total SHG': 166, 'Total VO': 15, 'Total CLF': 0, 'Total GP': 1, 'Total SHG Prepared ENT Plan': 33, 'Total SHG Prepared LH Plan': 0 },
+      { _excelRowNumber: 10, _sno: 6, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'KOTWA', 'Gram Panchayat': 'BATHANA', 'Total SHG': 131, 'Total VO': 11, 'Total CLF': 0, 'Total GP': 1, 'Total SHG Prepared ENT Plan': 0, 'Total SHG Prepared LH Plan': 0 },
+      { _excelRowNumber: 11, _sno: 7, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'KOTWA', 'Gram Panchayat': 'BHAHARWA KALA EAST', 'Total SHG': 129, 'Total VO': 1, 'Total CLF': 0, 'Total GP': 1, 'Total SHG Prepared ENT Plan': 0, 'Total SHG Prepared LH Plan': 0 },
+      { _excelRowNumber: 12, _sno: 8, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'KOTWA', 'Gram Panchayat': 'POKHARA', 'Total SHG': 125, 'Total VO': 11, 'Total CLF': 0, 'Total GP': 1, 'Total SHG Prepared ENT Plan': 0, 'Total SHG Prepared LH Plan': 0 },
+      { _excelRowNumber: 13, _sno: 9, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'KOTWA', 'Gram Panchayat': 'BHOPATPUR SOUTH', 'Total SHG': 130, 'Total VO': 10, 'Total CLF': 0, 'Total GP': 1, 'Total SHG Prepared ENT Plan': 12, 'Total SHG Prepared LH Plan': 0 },
+      { _excelRowNumber: 14, _sno: 10, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'KOTWA', 'Gram Panchayat': 'BHOPATPUR NORTH', 'Total SHG': 112, 'Total VO': 10, 'Total CLF': 0, 'Total GP': 1, 'Total SHG Prepared ENT Plan': 2, 'Total SHG Prepared LH Plan': 0 },
+      { _excelRowNumber: 15, _sno: 11, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'KOTWA', 'Gram Panchayat': 'GOPI CHHAPRA', 'Total SHG': 155, 'Total VO': 11, 'Total CLF': 0, 'Total GP': 1, 'Total SHG Prepared ENT Plan': 66, 'Total SHG Prepared LH Plan': 0 },
+      { _excelRowNumber: 16, _sno: 12, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'KOTWA', 'Gram Panchayat': 'BHAHARWA KALA WEST', 'Total SHG': 78, 'Total VO': 19, 'Total CLF': 0, 'Total GP': 1, 'Total SHG Prepared ENT Plan': 0, 'Total SHG Prepared LH Plan': 0 },
+      { _excelRowNumber: 17, _sno: 13, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'KOTWA', 'Gram Panchayat': 'JAGIRAHA', 'Total SHG': 110, 'Total VO': 8, 'Total CLF': 0, 'Total GP': 1, 'Total SHG Prepared ENT Plan': 32, 'Total SHG Prepared LH Plan': 0 },
+      { _excelRowNumber: 18, _sno: 14, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'KOTWA', 'Gram Panchayat': 'JASAULI PATTI', 'Total SHG': 93, 'Total VO': 7, 'Total CLF': 0, 'Total GP': 1, 'Total SHG Prepared ENT Plan': 19, 'Total SHG Prepared LH Plan': 0 },
+      { _excelRowNumber: 19, _sno: 15, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'KOTWA', 'Gram Panchayat': 'KOTWA', 'Total SHG': 74, 'Total VO': 5, 'Total CLF': 0, 'Total GP': 1, 'Total SHG Prepared ENT Plan': 0, 'Total SHG Prepared LH Plan': 0 },
+      { _excelRowNumber: 20, _sno: 16, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'KOTWA', 'Gram Panchayat': 'DUMRA', 'Total SHG': 46, 'Total VO': 4, 'Total CLF': 0, 'Total GP': 1, 'Total SHG Prepared ENT Plan': 0, 'Total SHG Prepared LH Plan': 0 }
+    ]
+  },
+
   sales: {
     name: 'Sales & Revenue Performance',
     description: 'Retail & wholesale order transactions with prices, units, and discounts.',

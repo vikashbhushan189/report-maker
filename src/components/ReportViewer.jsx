@@ -40,10 +40,11 @@ export default function ReportViewer({
   const theme = REPORT_THEMES[reportMeta.theme] || REPORT_THEMES.ekyc_olive;
   const isP01 = reportMeta.presetId === 'p01_shg_households' || reportMeta.layoutType === 'p01_grid';
   const isLakhpati = !isP01 && (reportMeta.presetId === 'lakhpati_didi' || reportMeta.layoutType === 'lakhpati_grid');
-  const isVoIndividual = !isP01 && !isLakhpati && (reportMeta.presetId === 't01_vo_individual' || reportMeta.layoutType === 't01_vo_individual_grid');
-  const isVo = !isP01 && !isLakhpati && !isVoIndividual && (reportMeta.presetId === 't01_vo_transactions' || reportMeta.layoutType === 't01_vo_grid');
-  const isT01 = !isP01 && !isLakhpati && !isVoIndividual && !isVo && (reportMeta.presetId === 't01_transactions' || reportMeta.layoutType === 't01_grid');
-  const isEkyc = !isP01 && !isLakhpati && !isVoIndividual && !isVo && !isT01 && (reportMeta.presetId === 'ekyc_progress' || reportMeta.layoutType === 'ekyc_grid');
+  const isVprp = !isP01 && !isLakhpati && (reportMeta.presetId === 'vprp_entry' || reportMeta.layoutType === 'vprp_grid');
+  const isVoIndividual = !isP01 && !isLakhpati && !isVprp && (reportMeta.presetId === 't01_vo_individual' || reportMeta.layoutType === 't01_vo_individual_grid');
+  const isVo = !isP01 && !isLakhpati && !isVprp && !isVoIndividual && (reportMeta.presetId === 't01_vo_transactions' || reportMeta.layoutType === 't01_vo_grid');
+  const isT01 = !isP01 && !isLakhpati && !isVprp && !isVoIndividual && !isVo && (reportMeta.presetId === 't01_transactions' || reportMeta.layoutType === 't01_grid');
+  const isEkyc = !isP01 && !isLakhpati && !isVprp && !isVoIndividual && !isVo && !isT01 && (reportMeta.presetId === 'ekyc_progress' || reportMeta.layoutType === 'ekyc_grid');
 
   const [sortCol, setSortCol] = useState(reportMeta.sortByCol || '');
   const [sortDir, setSortDir] = useState(reportMeta.sortDir || 'asc');
@@ -96,7 +97,7 @@ export default function ReportViewer({
     return sortedRows.slice(start, start + pageSize);
   }, [sortedRows, currentPage, pageSize]);
 
-  // Maximums for data bar proportions in Lakhpati Didi
+  // Maximums for data bar proportions in Lakhpati Didi & VPRP
   const maxTotalEntry = useMemo(() => {
     return Math.max(...rows.map(r => {
       const v = Number(r['Total Entry'] ?? r['Total (Unique count)'] ?? 0);
@@ -107,6 +108,34 @@ export default function ReportViewer({
   const maxGap = useMemo(() => {
     return Math.max(...rows.map(r => {
       const v = Number(r['Gap'] ?? 0);
+      return isNaN(v) ? 0 : v;
+    }), 1);
+  }, [rows]);
+
+  const maxVprpEntPrep = useMemo(() => {
+    return Math.max(...rows.map(r => {
+      const v = Number(r['Total SHG Prepared ENT Plan'] ?? 0);
+      return isNaN(v) ? 0 : v;
+    }), 1);
+  }, [rows]);
+
+  const maxVprpEntGap = useMemo(() => {
+    return Math.max(...rows.map(r => {
+      const v = Number(r['Entitlement Plan Gap'] ?? 0);
+      return isNaN(v) ? 0 : v;
+    }), 1);
+  }, [rows]);
+
+  const maxVprpLhPrep = useMemo(() => {
+    return Math.max(...rows.map(r => {
+      const v = Number(r['Total SHG Prepared LH Plan'] ?? 0);
+      return isNaN(v) ? 0 : v;
+    }), 1);
+  }, [rows]);
+
+  const maxVprpLhGap = useMemo(() => {
+    return Math.max(...rows.map(r => {
+      const v = Number(r['Livelihood Plan Gap'] ?? 0);
       return isNaN(v) ? 0 : v;
     }), 1);
   }, [rows]);
@@ -289,6 +318,15 @@ export default function ReportViewer({
               </div>
             </div>
           </div>
+        ) : isVprp ? (
+          <div>
+            {/* VPRP Top Title: Single Bold Red Banner as in Official Image */}
+            <div className="py-2.5 px-4 text-center border-b border-slate-300 bg-white">
+              <h1 className="text-base sm:text-lg font-bold text-[#c00000] tracking-wide uppercase">
+                {reportMeta.title || 'VPRP ENTRY STATUS REPORT, 22-10-2026'}
+              </h1>
+            </div>
+          </div>
         ) : isVo || isVoIndividual ? (
           <div>
             {/* VO Top Title: Red Centered on Gray/Beige Background */}
@@ -387,7 +425,7 @@ export default function ReportViewer({
                   S.No
                 </th>
                 {columns.map(col => {
-                  const isRedHeader = isLakhpati || col.headerColor === '#c00000' || col.header.includes('Gap') || col.header.includes('Not Verified');
+                  const isRedHeader = isLakhpati || isVprp || col.headerColor === '#c00000' || col.header.includes('Gap') || col.header.includes('Not Verified');
                   const isManual = col.isManualEditable || col.type === 'manual';
                   const isSorted = sortCol === col.header;
 
@@ -406,6 +444,11 @@ export default function ReportViewer({
                           {isSorted && (
                             <span className="text-xs text-emerald-900 font-extrabold">
                               {sortDir === 'asc' ? '▲' : '▼'}
+                            </span>
+                          )}
+                          {(isVprp || isLakhpati) && (
+                            <span className="inline-flex items-center justify-center w-3.5 h-3.5 bg-slate-100 border border-slate-400 rounded-xs text-[9px] text-slate-700 ml-0.5 shadow-2xs font-mono font-bold leading-none">
+                              ▾
                             </span>
                           )}
                           {isManual && (
@@ -533,6 +576,87 @@ export default function ReportViewer({
                           );
                         }
 
+                        // Special cell rendering for VPRP Entry Status Report
+                        if (isVprp && (col.header === 'Total SHG Prepared ENT Plan' || col.cellStyle === 'vprp_ent_green_bar')) {
+                          const num = typeof rawVal === 'number' ? rawVal : Number(String(rawVal || '').replace(/[$,%]/g, '').trim()) || 0;
+                          const pct = Math.min(100, Math.max(0, (num / maxVprpEntPrep) * 100));
+                          const formatted = formatValue(rawVal, col.format);
+
+                          return (
+                            <td key={col.id} className="border border-slate-300 py-1 px-1 relative overflow-hidden bg-white">
+                              {num > 0 && (
+                                <div
+                                  className="absolute left-0 top-0.5 bottom-0.5 bg-gradient-to-r from-[#63be7b]/90 to-[#63be7b]/75 border-r-2 border-[#548235] transition-all pointer-events-none"
+                                  style={{ width: `${pct}%` }}
+                                />
+                              )}
+                              <span className="relative z-10 block text-right font-medium text-slate-900 pr-1">
+                                {formatted}
+                              </span>
+                            </td>
+                          );
+                        }
+
+                        if (isVprp && (col.header === 'Entitlement Plan Gap' || (col.cellStyle === 'vprp_gap_red_bar' && col.header.includes('Entitlement')))) {
+                          const num = typeof rawVal === 'number' ? rawVal : Number(String(rawVal || '').replace(/[$,%]/g, '').trim()) || 0;
+                          const pct = Math.min(100, Math.max(0, (num / maxVprpEntGap) * 100));
+                          const formatted = formatValue(rawVal, col.format);
+
+                          return (
+                            <td key={col.id} className="border border-slate-300 py-1 px-1 relative overflow-hidden bg-white">
+                              {num > 0 && (
+                                <div
+                                  className="absolute left-0 top-0.5 bottom-0.5 bg-gradient-to-r from-[#f87171]/90 to-[#f87171]/80 border-r-2 border-[#dc2626] transition-all pointer-events-none"
+                                  style={{ width: `${pct}%` }}
+                                />
+                              )}
+                              <span className="relative z-10 block text-right font-bold text-slate-900 pr-1">
+                                {formatted}
+                              </span>
+                            </td>
+                          );
+                        }
+
+                        if (isVprp && (col.header === 'Total SHG Prepared LH Plan' || col.cellStyle === 'vprp_lh_green_bar')) {
+                          const num = typeof rawVal === 'number' ? rawVal : Number(String(rawVal || '').replace(/[$,%]/g, '').trim()) || 0;
+                          const pct = Math.min(100, Math.max(0, (num / maxVprpLhPrep) * 100));
+                          const formatted = formatValue(rawVal, col.format);
+
+                          return (
+                            <td key={col.id} className="border border-slate-300 py-1 px-1 relative overflow-hidden bg-white">
+                              {num > 0 && (
+                                <div
+                                  className="absolute left-0 top-0.5 bottom-0.5 bg-gradient-to-r from-[#63be7b]/90 to-[#63be7b]/75 border-r-2 border-[#548235] transition-all pointer-events-none"
+                                  style={{ width: `${pct}%` }}
+                                />
+                              )}
+                              <span className="relative z-10 block text-right font-medium text-slate-900 pr-1">
+                                {formatted}
+                              </span>
+                            </td>
+                          );
+                        }
+
+                        if (isVprp && (col.header === 'Livelihood Plan Gap' || (col.cellStyle === 'vprp_gap_red_bar' && col.header.includes('Livelihood')))) {
+                          const num = typeof rawVal === 'number' ? rawVal : Number(String(rawVal || '').replace(/[$,%]/g, '').trim()) || 0;
+                          const pct = Math.min(100, Math.max(0, (num / maxVprpLhGap) * 100));
+                          const formatted = formatValue(rawVal, col.format);
+
+                          return (
+                            <td key={col.id} className="border border-slate-300 py-1 px-1 relative overflow-hidden bg-white">
+                              {num > 0 && (
+                                <div
+                                  className="absolute left-0 top-0.5 bottom-0.5 bg-gradient-to-r from-[#f87171]/90 to-[#f87171]/80 border-r-2 border-[#dc2626] transition-all pointer-events-none"
+                                  style={{ width: `${pct}%` }}
+                                />
+                              )}
+                              <span className="relative z-10 block text-right font-medium text-slate-900 pr-1">
+                                {formatted}
+                              </span>
+                            </td>
+                          );
+                        }
+
                         // Check special cell styles as in the image
                         let cellClass = 'border border-slate-300 py-1.5 px-2 whitespace-nowrap ';
 
@@ -588,11 +712,11 @@ export default function ReportViewer({
             {/* Total Row: Bold Red Text as in Image (Omitted for Individual VO reports) */}
             {!isVoIndividual && totals && rows.length > 0 && (
               <tfoot className="sticky bottom-0 z-10">
-                <tr className={`font-bold border-t-2 border-slate-400 border-b-2 border-slate-400 ${
-                  isP01 ? 'bg-white text-[#c00000]' : isLakhpati ? 'bg-white text-slate-900' : isVo || isT01 ? 'bg-rose-100/80 text-slate-900' : 'bg-white text-[#c00000]'
+                <tr className={`font-bold border-t-2 border-slate-400 border-b-4 border-double border-slate-400 ${
+                  isP01 || isVprp ? 'bg-white text-[#c00000]' : isLakhpati ? 'bg-white text-slate-900' : isVo || isT01 ? 'bg-rose-100/80 text-slate-900' : 'bg-white text-[#c00000]'
                 }`}>
                   <td className="py-2 px-2 text-center border border-slate-300">
-                    {isLakhpati ? '' : '—'}
+                    {isLakhpati || isVprp ? '' : '—'}
                   </td>
                   {columns.map((col, cIdx) => {
                     const isFirst = cIdx === 0;
@@ -610,7 +734,7 @@ export default function ReportViewer({
                         key={col.id}
                         className={`py-2 px-2 border border-slate-300 whitespace-nowrap ${
                           isFirst ? 'text-center font-extrabold text-sm' : 'text-right font-extrabold'
-                        }`}
+                        } ${isVprp ? 'text-[#c00000]' : ''}`}
                       >
                         {displayVal}
                       </td>

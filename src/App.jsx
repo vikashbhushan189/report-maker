@@ -7,7 +7,7 @@ import ReportViewer from './components/ReportViewer';
 import SplitView from './components/SplitView';
 import { SAMPLE_DATASETS } from './utils/sampleData';
 import { parseExcelFile, parseRawText, extractSheetData, analyzeColumns } from './utils/excelReader';
-import { REPORT_TOPICS, REPORT_THEMES, detectT01Months, detectVoMonths, detectVoIndividualMonths, generateT01Columns, generateVoColumns, generateVoIndividualColumns, generateLakhpatiColumns, generateP01Columns, generateEkycColumns, getPreviousDate } from './utils/reportTemplates';
+import { REPORT_TOPICS, REPORT_THEMES, detectT01Months, detectVoMonths, detectVoIndividualMonths, generateT01Columns, generateVoColumns, generateVoIndividualColumns, generateLakhpatiColumns, generateVprpColumns, generateP01Columns, generateEkycColumns, getPreviousDate } from './utils/reportTemplates';
 import { generateReportData } from './utils/formulaEngine';
 import { exportToStyledExcel, exportToCSV } from './utils/excelExporter';
 import { CheckCircle2, AlertCircle } from 'lucide-react';
@@ -122,6 +122,7 @@ export default function App() {
 
     const isP01 = topic.id === 'p01_shg_households';
     const isLakhpati = topic.id === 'lakhpati_didi';
+    const isVprp = topic.id === 'vprp_entry';
     const isVoIndividual = topic.id === 't01_vo_individual';
     const isVo = topic.id === 't01_vo_transactions';
     const isEkyc = topic.id === 'ekyc_progress';
@@ -131,6 +132,8 @@ export default function App() {
       ? (topic.dateLabel || 'Date:-14-10-2026')
       : isLakhpati
       ? (topic.dateLabel || 'Date:-21-10-2026')
+      : isVprp
+      ? (topic.dateLabel || 'Date:-22-10-2026')
       : isVoIndividual
       ? (topic.dateLabel || 'Date:-12-10-2026')
       : isVo
@@ -151,12 +154,12 @@ export default function App() {
       yesterdayDate: prev.yesterdayDate || topic.yesterdayDate || '12-10-2026',
       dayBeforeYesterdayDate: prev.dayBeforeYesterdayDate || topic.dayBeforeYesterdayDate || '10-10-2026',
       dateLabel: defaultDateLabel,
-      currentDate: isP01 ? (topic.currentDate || '14-10-2026') : isLakhpati ? (topic.currentDate || '21-10-2026') : isVoIndividual ? (topic.currentDate || '12-10-2026') : isVo ? (topic.currentDate || '13-10-2026') : isT01 ? (topic.currentDate || '10-10-2026') : (prev.todayDate || '13-10-2026'),
-      prevDate: isP01 ? '13-10-2026' : isLakhpati ? '20-10-2026' : isVoIndividual ? '10-10-2026' : isVo ? '10-10-2026' : isT01 ? (topic.prevDate || '10-10-2026') : (prev.yesterdayDate || '12-10-2026'),
+      currentDate: isP01 ? (topic.currentDate || '14-10-2026') : isLakhpati ? (topic.currentDate || '21-10-2026') : isVprp ? (topic.currentDate || '22-10-2026') : isVoIndividual ? (topic.currentDate || '12-10-2026') : isVo ? (topic.currentDate || '13-10-2026') : isT01 ? (topic.currentDate || '10-10-2026') : (prev.todayDate || '13-10-2026'),
+      prevDate: isP01 ? '13-10-2026' : isLakhpati ? '20-10-2026' : isVprp ? '21-10-2026' : isVoIndividual ? '10-10-2026' : isVo ? '10-10-2026' : isT01 ? (topic.prevDate || '10-10-2026') : (prev.yesterdayDate || '12-10-2026'),
       reportDate: isP01 ? (topic.reportDate || '13-10-2026') : prev.reportDate,
       period: isP01 ? (topic.period || 'October-2026') : prev.period,
-      theme: topic.theme || (isLakhpati ? 'lakhpati_yellow' : 'ekyc_olive'),
-      layoutType: topic.layoutType || (isP01 ? 'p01_grid' : isLakhpati ? 'lakhpati_grid' : isVoIndividual ? 't01_vo_individual_grid' : isVo ? 't01_vo_grid' : isT01 ? 't01_grid' : 'ekyc_grid'),
+      theme: topic.theme || (isLakhpati ? 'lakhpati_yellow' : isVprp ? 'vprp_yellow' : 'ekyc_olive'),
+      layoutType: topic.layoutType || (isP01 ? 'p01_grid' : isLakhpati ? 'lakhpati_grid' : isVprp ? 'vprp_grid' : isVoIndividual ? 't01_vo_individual_grid' : isVo ? 't01_vo_grid' : isT01 ? 't01_grid' : 'ekyc_grid'),
       sortByCol: topic.sortByCol || '',
       sortDir: topic.sortDir || 'asc',
       downloadInfo: topic.downloadInfo || prev.downloadInfo
@@ -176,6 +179,12 @@ export default function App() {
       setColumns(generateLakhpatiColumns());
       if (!currentHeaders.some(h => h.includes('Potential Lakhpati Didi') || h.includes('Active Approved Potential Didis'))) {
         loadDataset('lakhpati_didi');
+        return;
+      }
+    } else if (isVprp) {
+      setColumns(generateVprpColumns());
+      if (!currentHeaders.some(h => h.includes('Total SHG Prepared ENT Plan') || h.includes('Total SHG prepared Entitlement Plan') || h.includes('Entitlement Plan Gap') || (h.includes('Total CLF') && h.includes('Total GP')))) {
+        loadDataset('vprp_entry');
         return;
       }
     } else if (isVoIndividual) {
@@ -306,16 +315,21 @@ export default function App() {
     const isLakhpatiData = !isP01Data && (parsed.metadata?.reportType === 'lakhpati_didi' ||
       parsed.headers.some(h => /total \(unique count\)/i.test(h) || /aajeevika/i.test(h) || /potential lakhpati didi/i.test(h) || /active approved potential/i.test(h)));
 
+    // Check if uploaded data is VPRP Entry Status Report
+    const isVprpData = !isP01Data && !isLakhpatiData && (parsed.metadata?.reportType === 'vprp_entry' ||
+      parsed.headers.some(h => /entitlement plan|livelihood plan|prepared ent|prepared lh/i.test(h)) ||
+      (parsed.headers.some(h => /total clf/i.test(h)) && parsed.headers.some(h => /total gp/i.test(h))));
+
     // Check if uploaded data is VO Individual
-    const isVoIndividualData = !isP01Data && !isLakhpatiData && (parsed.metadata?.reportType === 't01_vo_individual' ||
+    const isVoIndividualData = !isP01Data && !isLakhpatiData && !isVprpData && (parsed.metadata?.reportType === 't01_vo_individual' ||
       parsed.headers.some(h => h.includes('VO Name') || h.includes('eBK Name') || h.includes('Financial Intermediary')));
 
     // Check if uploaded data is VO transactions (CLF Wise)
-    const isVoData = !isP01Data && !isLakhpatiData && !isVoIndividualData && (parsed.metadata?.reportType === 't01_vo' ||
+    const isVoData = !isP01Data && !isLakhpatiData && !isVprpData && !isVoIndividualData && (parsed.metadata?.reportType === 't01_vo' ||
       parsed.headers.some(h => h.includes('Total VOs') || h.includes('CLF Name') || h.includes('VOs Financial-Intermediary')));
 
     // Check if uploaded data is T01 SHG
-    const isT01Data = !isP01Data && !isLakhpatiData && !isVoIndividualData && !isVoData && ((parsed.detectedMonths && parsed.detectedMonths.length > 0) ||
+    const isT01Data = !isP01Data && !isLakhpatiData && !isVprpData && !isVoIndividualData && !isVoData && ((parsed.detectedMonths && parsed.detectedMonths.length > 0) ||
       parsed.headers.some(h => h.includes('Total SHGs') || h.includes('Transactions Captured')));
 
     if (isP01Data) {
@@ -364,6 +378,27 @@ export default function App() {
         downloadInfo: parsed.metadata?.downloadInfo || prev.downloadInfo
       }));
       setColumns(generateLakhpatiColumns());
+    } else if (isVprpData) {
+      const detectedDate = parsed.metadata?.detectedDate || '22-10-2026';
+
+      setSelectedTopicId('vprp_entry');
+      setReportMeta(prev => ({
+        ...prev,
+        presetId: 'vprp_entry',
+        title: `VPRP ENTRY STATUS REPORT, ${detectedDate}`,
+        subtitle: 'VPRP Entry Status Report',
+        district: (parsed.metadata?.district || 'PURBI CHAMPARAN').replace(/^District:\s*/i, '').replace(/\s+(?:Block|Panchayat|Date|Period|State):.*$/i, '').trim() || 'PURBI CHAMPARAN',
+        companyName: `Block: ${(parsed.metadata?.block || 'KOTWA').replace(/^Block:\s*/i, '').replace(/\s+(?:District|Panchayat|Date|Period|State):.*$/i, '').trim() || 'KOTWA'}`,
+        panchayat: 'All Panchayats',
+        dateLabel: `Date:-${detectedDate}`,
+        currentDate: detectedDate,
+        theme: 'vprp_yellow',
+        layoutType: 'vprp_grid',
+        sortByCol: 'Entitlement Plan Gap',
+        sortDir: 'desc',
+        downloadInfo: parsed.metadata?.downloadInfo || prev.downloadInfo
+      }));
+      setColumns(generateVprpColumns());
     } else if (isVoIndividualData) {
       const months = parsed.detectedMonths && parsed.detectedMonths.length > 0
         ? parsed.detectedMonths

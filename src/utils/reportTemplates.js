@@ -65,6 +65,19 @@ export const REPORT_THEMES = {
     summaryText: '#000000', // Bold black summary text as in image
     borderColor: '#94a3b8',
     badgeClass: 'bg-yellow-100 text-yellow-800 border-yellow-300'
+  },
+  vprp_yellow: {
+    id: 'vprp_yellow',
+    name: 'VPRP Gold Yellow',
+    primaryColor: '#ffff00', // Vibrant yellow header from official image
+    primaryColorDark: '#eab308',
+    accentBg: '#fefce8',
+    headerText: '#c00000', // Bold red header text as in image
+    titleColor: '#c00000', // Bold red title
+    summaryBg: '#ffffff',
+    summaryText: '#c00000', // Bold red summary text as in image
+    borderColor: '#94a3b8',
+    badgeClass: 'bg-amber-100 text-amber-800 border-amber-300'
   }
 };
 
@@ -631,7 +644,156 @@ export function generateLakhpatiColumns() {
   ];
 }
 
+/**
+ * Dynamically builds column definitions for VPRP Entry Status Report
+ * Exactly replicates the 11 data columns (12 with S.No) in the official sample report:
+ * 1. S.No
+ * 2. Gram Panchayat
+ * 3. Total SHG
+ * 4. Total VO
+ * 5. Total CLF
+ * 6. Total GP
+ * 7. Total SHG Prepared ENT Plan (Green Data Bar)
+ * 8. % of SHG prepared Entitlement Plan (Formula)
+ * 9. Entitlement Plan Gap (Formula, Red Data Bar)
+ * 10. Total SHG Prepared LH Plan (Green Data Bar)
+ * 11. % of SHG prepared Livelihood Plan (Formula)
+ * 12. Livelihood Plan Gap (Formula, Red Data Bar)
+ */
+export function generateVprpColumns() {
+  return [
+    {
+      id: 'col_gp',
+      header: 'Gram Panchayat',
+      type: 'source',
+      sourceCol: 'Gram Panchayat',
+      format: 'text',
+      summaryOp: 'none'
+    },
+    {
+      id: 'col_total_shg',
+      header: 'Total SHG',
+      type: 'source',
+      sourceCol: 'Total SHG',
+      fallbackCol: 'Total SHGs',
+      fallbackPattern: 'Total SHG',
+      format: 'number',
+      summaryOp: 'sum'
+    },
+    {
+      id: 'col_total_vo',
+      header: 'Total VO',
+      type: 'source',
+      sourceCol: 'Total VO',
+      fallbackCol: 'Total VOs',
+      fallbackPattern: 'Total VO',
+      format: 'number',
+      summaryOp: 'sum'
+    },
+    {
+      id: 'col_total_clf',
+      header: 'Total CLF',
+      type: 'source',
+      sourceCol: 'Total CLF',
+      fallbackCol: 'Total CLFs',
+      fallbackPattern: 'Total CLF',
+      format: 'number',
+      summaryOp: 'sum'
+    },
+    {
+      id: 'col_total_gp',
+      header: 'Total GP',
+      type: 'source',
+      sourceCol: 'Total GP',
+      fallbackCol: 'Total GPs',
+      fallbackPattern: 'Total GP',
+      format: 'number',
+      summaryOp: 'sum'
+    },
+    {
+      id: 'col_ent_prepared',
+      header: 'Total SHG Prepared ENT Plan',
+      type: 'source',
+      sourceCol: 'Total SHG Prepared ENT Plan',
+      fallbackCol: 'Total SHG prepared Entitlement Plan',
+      fallbackPattern: 'Prepared ENT|Entitlement Plan Prepared|Entitlement Plan Submitted|prepared ENT',
+      format: 'number',
+      summaryOp: 'sum',
+      cellStyle: 'vprp_ent_green_bar'
+    },
+    {
+      id: 'col_pct_ent',
+      header: '% of SHG prepared Entitlement Plan',
+      type: 'formula',
+      formula: 'IF([Total SHG] > 0, ([Total SHG Prepared ENT Plan] / [Total SHG]) * 100, 0)',
+      format: 'percent',
+      summaryOp: 'weighted_pct_vprp_ent',
+      cellStyle: 'pct_vprp'
+    },
+    {
+      id: 'col_ent_gap',
+      header: 'Entitlement Plan Gap',
+      type: 'formula',
+      formula: '[Total SHG] - [Total SHG Prepared ENT Plan]',
+      format: 'number',
+      summaryOp: 'sum',
+      cellStyle: 'vprp_gap_red_bar',
+      headerColor: '#c00000'
+    },
+    {
+      id: 'col_lh_prepared',
+      header: 'Total SHG Prepared LH Plan',
+      type: 'source',
+      sourceCol: 'Total SHG Prepared LH Plan',
+      fallbackCol: 'Total SHG prepared Livelihood Plan',
+      fallbackPattern: 'Prepared LH|Livelihood Plan Prepared|Livelihood Plan Submitted|prepared LH',
+      format: 'number',
+      summaryOp: 'sum',
+      cellStyle: 'vprp_lh_green_bar'
+    },
+    {
+      id: 'col_pct_lh',
+      header: '% of SHG prepared Livelihood Plan',
+      type: 'formula',
+      formula: 'IF([Total SHG] > 0, ([Total SHG Prepared LH Plan] / [Total SHG]) * 100, 0)',
+      format: 'percent',
+      summaryOp: 'weighted_pct_vprp_lh',
+      cellStyle: 'pct_vprp'
+    },
+    {
+      id: 'col_lh_gap',
+      header: 'Livelihood Plan Gap',
+      type: 'formula',
+      formula: '[Total SHG] - [Total SHG Prepared LH Plan]',
+      format: 'number',
+      summaryOp: 'sum',
+      cellStyle: 'vprp_gap_red_bar',
+      headerColor: '#c00000'
+    }
+  ];
+}
+
 export const REPORT_TOPICS = [
+  {
+    id: 'vprp_entry',
+    topicName: 'VPRP Entry Status Report (Official Image Format)',
+    badge: 'Official VPRP Format',
+    isPrimary: false,
+    title: 'VPRP ENTRY STATUS REPORT, 22-10-2026',
+    subtitle: 'VPRP Entry Status Report',
+    companyName: 'Block: KOTWA',
+    district: 'PURBI CHAMPARAN',
+    block: 'KOTWA',
+    panchayat: 'All Panchayats',
+    dateLabel: 'Date:-22-10-2026',
+    currentDate: '22-10-2026',
+    theme: 'vprp_yellow',
+    layoutType: 'vprp_grid',
+    sortByCol: 'Entitlement Plan Gap',
+    sortDir: 'desc',
+    description: 'Official VPRP Entry Status format tracking Total SHG, VO, CLF, GP, Entitlement Plan Prepared with green data bars, Entitlement Plan Gap with red data bars, Livelihood Plan Prepared and Gap, sorted by Gap descending.',
+    columns: generateVprpColumns()
+  },
   {
     id: 'p01_shg_households',
     topicName: 'P01 - SMC - SHGs and Households (Official Image Format)',
