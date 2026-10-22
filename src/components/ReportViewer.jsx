@@ -486,10 +486,10 @@ export default function ReportViewer({
                           return (
                             <td key={col.id} className="border border-slate-300 py-1 px-1 relative overflow-hidden bg-white">
                               <div
-                                className="absolute left-0 top-0.5 bottom-0.5 bg-[#52c41a]/60 rounded-xs border-r border-[#389e0d]/50 transition-all pointer-events-none"
+                                className="absolute left-0 top-0.5 bottom-0.5 bg-gradient-to-r from-[#63be7b]/90 to-[#63be7b]/75 border-r-2 border-[#548235] transition-all pointer-events-none"
                                 style={{ width: `${pct}%` }}
                               />
-                              <span className="relative z-10 block text-right font-bold text-slate-900 pr-1">
+                              <span className="relative z-10 block text-right font-medium text-slate-900 pr-1">
                                 {formatted}
                               </span>
                             </td>
@@ -504,7 +504,7 @@ export default function ReportViewer({
                           return (
                             <td key={col.id} className="border border-slate-300 py-1 px-1 relative overflow-hidden bg-white">
                               <div
-                                className="absolute left-0 top-0.5 bottom-0.5 bg-[#f87171] rounded-xs border-r border-[#ef4444]/60 transition-all pointer-events-none"
+                                className="absolute left-0 top-0.5 bottom-0.5 bg-gradient-to-r from-[#f87171]/90 to-[#f87171]/80 border-r-2 border-[#dc2626] transition-all pointer-events-none"
                                 style={{ width: `${pct}%` }}
                               />
                               <span className="relative z-10 block text-right font-bold text-slate-900 pr-1">
@@ -520,12 +520,12 @@ export default function ReportViewer({
 
                           return (
                             <td key={col.id} className="border border-slate-300 py-1.5 px-2 bg-white">
-                              <div className="flex items-center justify-end gap-2">
+                              <div className="flex items-center justify-end gap-2.5">
                                 <span
-                                  className={`w-3.5 h-3.5 rounded-full shrink-0 ${circleMeta.bg} inline-block shadow-2xs`}
+                                  className={`w-3.5 h-3.5 rounded-full shrink-0 ${circleMeta.bg} inline-block`}
                                   title={circleMeta.label}
                                 />
-                                <span className="font-semibold text-slate-900">
+                                <span className="font-medium text-slate-900 font-mono text-xs">
                                   {formatted}
                                 </span>
                               </div>

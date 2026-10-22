@@ -2,7 +2,7 @@
  * Formula Evaluation & Report Generation Engine
  * Safely parses and calculates column formulas, summaries, and transformations.
  */
-import { KOTWA_LAKHPATI_TARGETS } from './reportTemplates';
+import { KOTWA_LAKHPATI_TARGETS } from './reportTemplates.js';
 
 /**
  * Format a numeric value according to column formatting rules
@@ -68,7 +68,11 @@ export function evaluateFormula(formulaStr, contextRow) {
       const falseVal = ifMatch[3].trim().replace(/^["']|["']$/g, '');
 
       const condEvaluated = evaluateCondition(condExpr, contextRow);
-      return condEvaluated ? trueVal : falseVal;
+      const chosenExpr = condEvaluated ? trueVal : falseVal;
+      if (/^-?\d+(?:\.\d+)?$/.test(chosenExpr)) {
+        return Number(chosenExpr);
+      }
+      return evaluateFormula(chosenExpr, contextRow);
     }
 
     // 2. Replace column tokens [Column Name] with numeric values from contextRow
@@ -406,10 +410,10 @@ export function generateReportData(
   const gapTotal = totals['Gap'];
 
   if (targetTotal && Number(targetTotal) > 0) {
-    if (totalEntryTotal !== undefined && totals['% Entry'] !== undefined) {
+    if (totalEntryTotal !== undefined) {
       totals['% Entry'] = (Number(totalEntryTotal) / Number(targetTotal)) * 100;
     }
-    if (gapTotal !== undefined && totals['% Gap'] !== undefined) {
+    if (gapTotal !== undefined) {
       totals['% Gap'] = (Number(gapTotal) / Number(targetTotal)) * 100;
     }
   }
@@ -433,12 +437,12 @@ export function getLakhpatiGapCircleColor(val) {
     return { bg: 'bg-slate-400', excelArgb: 'FF94A3B8', label: '—' };
   }
   if (num >= 90) {
-    return { bg: 'bg-[#c00000]', excelArgb: 'FFC00000', label: 'Critical Gap (>=90%)' };
+    return { bg: 'bg-gradient-to-br from-red-400 via-red-600 to-red-800 border border-red-900/40 shadow-xs', excelArgb: 'FFC00000', label: 'Critical Gap (>=90%)' };
   }
   if (num >= 70) {
-    return { bg: 'bg-[#fb923c]', excelArgb: 'FFFB923C', label: 'Medium Gap (70-89%)' };
+    return { bg: 'bg-gradient-to-br from-amber-300 via-orange-400 to-orange-600 border border-amber-800/40 shadow-xs', excelArgb: 'FFFB923C', label: 'Medium Gap (70-89%)' };
   }
-  return { bg: 'bg-[#1e293b]', excelArgb: 'FF1E293B', label: 'Lower Gap (<70%)' };
+  return { bg: 'bg-gradient-to-br from-slate-600 via-slate-800 to-black border border-black/60 shadow-xs', excelArgb: 'FF1E293B', label: 'Lower Gap (<70%)' };
 }
 
 /**

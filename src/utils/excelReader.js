@@ -148,20 +148,27 @@ export function extractSheetData(workbook, sheetName) {
       metadata.title = 'S01 - Member KYC Details';
       metadata.reportType = 's01';
     }
-    const blockMatch = rowStr.match(/block:\s*([^,\t]+)/i);
-    if (blockMatch) metadata.block = blockMatch[1].trim();
-
-    const districtMatch = rowStr.match(/district:\s*([^,\t]+)/i);
+    const districtMatch = rowStr.match(/district:\s*([^,\t\r\n]+?)(?=\s+(?:block|state|panchayat|date|period)|$)/i);
     if (districtMatch) metadata.district = districtMatch[1].trim();
 
-    const stateMatch = rowStr.match(/state:\s*([^,\t]+)/i);
+    const blockMatch = rowStr.match(/block:\s*([^,\t\r\n]+?)(?=\s+(?:district|state|panchayat|date|period)|$)/i);
+    if (blockMatch) metadata.block = blockMatch[1].trim();
+
+    const stateMatch = rowStr.match(/state:\s*([^,\t\r\n]+?)(?=\s+(?:district|block|panchayat|date|period)|$)/i);
     if (stateMatch) metadata.state = stateMatch[1].trim();
 
-    const periodMatch = rowStr.match(/period:\s*([^,\t]+)/i);
+    const periodMatch = rowStr.match(/period:\s*([^,\t\r\n]+?)(?=\s+(?:district|block|panchayat|state|date)|$)/i);
     if (periodMatch) metadata.period = periodMatch[1].trim();
 
-    const panchayatMatch = rowStr.match(/panchayat:\s*([^,\t]+)/i);
+    const panchayatMatch = rowStr.match(/panchayat:\s*([^,\t\r\n]+?)(?=\s+(?:district|block|state|date|period)|$)/i);
     if (panchayatMatch) metadata.panchayat = panchayatMatch[1].trim();
+  }
+
+  if (metadata.district) {
+    metadata.district = metadata.district.replace(/\s+(?:block|panchayat|date|period|state):.*$/i, '').trim();
+  }
+  if (metadata.block) {
+    metadata.block = metadata.block.replace(/\s+(?:district|panchayat|date|period|state):.*$/i, '').trim();
   }
 
   // Look for bottom footer (e.g. "User ID: IBR_KOTWA & Downloaded on: 21 October 2026 at 12:50:01 pm")

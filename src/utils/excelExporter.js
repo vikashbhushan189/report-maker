@@ -161,13 +161,25 @@ export async function exportToStyledExcel({
     const subheaderRow = sheet.getRow(currentRowIdx);
     subheaderRow.height = 24;
 
-    const districtText = `District: ${reportMeta.district || 'PURBI CHAMPARAN'}`;
-    const blockText = `Block: ${reportMeta.companyName?.replace(/^Block:\s*/i, '').trim() || 'KOTWA'}`;
+    const rawDistrict = reportMeta.district || 'PURBI CHAMPARAN';
+    const cleanDistrict = rawDistrict
+      .replace(/^District:\s*/i, '')
+      .replace(/\s+(?:Block|Panchayat|Date|Period|State):.*$/i, '')
+      .trim();
+    const districtText = `District: ${cleanDistrict || 'PURBI CHAMPARAN'}`;
+
+    const rawBlock = reportMeta.companyName?.replace(/^Block:\s*/i, '').trim() || reportMeta.block || 'KOTWA';
+    const cleanBlock = rawBlock
+      .replace(/^Block:\s*/i, '')
+      .replace(/\s+(?:District|Panchayat|Date|Period|State):.*$/i, '')
+      .trim();
+    const blockText = `Block: ${cleanBlock || 'KOTWA'}`;
+
     const dateText = reportMeta.dateLabel?.startsWith('Date:') ? reportMeta.dateLabel : `Date:-${reportMeta.currentDate || '21-10-2026'}`;
 
-    const b1End = Math.max(2, Math.floor(totalColsCount * 0.33));
-    const b2End = Math.max(b1End + 1, Math.floor(totalColsCount * 0.67));
-    const b3End = totalColsCount;
+    const b1End = 2; // S.No to Gram Panchayat
+    const b2End = 5; // Active Approved Potential Didis to Total Entry
+    const b3End = totalColsCount; // % Entry to % Gap
 
     sheet.mergeCells(currentRowIdx, 1, currentRowIdx, b1End);
     sheet.mergeCells(currentRowIdx, b1End + 1, currentRowIdx, b2End);
@@ -414,6 +426,16 @@ export async function exportToStyledExcel({
     cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
     cell.border = borderThin;
   });
+  if (isLakhpati) {
+    try {
+      sheet.autoFilter = {
+        from: { row: headerRowIdx, column: 1 },
+        to: { row: headerRowIdx, column: totalColsCount }
+      };
+    } catch (e) {
+      // Ignore autofilter error
+    }
+  }
   currentRowIdx++;
 
   const firstDataRowIdx = currentRowIdx;
@@ -561,7 +583,6 @@ export async function exportToStyledExcel({
           };
           colCell.numFmt = '#,##0';
           colCell.alignment = { vertical: 'middle', horizontal: 'right' };
-          colCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF87171' } };
           colCell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FF000000' } };
           return;
         }
@@ -573,7 +594,7 @@ export async function exportToStyledExcel({
           };
           colCell.numFmt = '0.00%';
           colCell.alignment = { vertical: 'middle', horizontal: 'right' };
-          colCell.font = { name: 'Calibri', size: 10, color: { argb: 'FFC00000' } };
+          colCell.font = { name: 'Calibri', size: 10, color: { argb: 'FF000000' } };
           return;
         }
 
@@ -1155,6 +1176,71 @@ export async function exportToStyledExcel({
   // ----------------------------------------------------
   // 6. Excel Conditional Formatting Rules (Dynamic Colorcoding)
   // ----------------------------------------------------
+  if (isLakhpati && lastDataRowIdx >= firstDataRowIdx) {
+    const colTotalEntry = colLetterMap['Total Entry'];
+    const colGap = colLetterMap['Gap'];
+    const colPctGap = colLetterMap['% Gap'];
+
+    // 1. Total Entry: Native Soft Green Data Bar (proportional bar exactly like official sample)
+    if (colTotalEntry) {
+      try {
+        sheet.addConditionalFormatting({
+          ref: `${colTotalEntry}${firstDataRowIdx}:${colTotalEntry}${lastDataRowIdx}`,
+          rules: [
+            {
+              type: 'dataBar',
+              cfvo: [{ type: 'min' }, { type: 'max' }],
+              color: { argb: 'FF63BE7B' } // Excel official soft green
+            }
+          ]
+        });
+      } catch (e) {
+        console.warn('DataBar formatting failed for Total Entry', e);
+      }
+    }
+
+    // 2. Gap: Native Soft Red Data Bar (proportional red bar, NOT solid full-cell fill!)
+    if (colGap) {
+      try {
+        sheet.addConditionalFormatting({
+          ref: `${colGap}${firstDataRowIdx}:${colGap}${lastDataRowIdx}`,
+          rules: [
+            {
+              type: 'dataBar',
+              cfvo: [{ type: 'min' }, { type: 'max' }],
+              color: { argb: 'FFF87171' } // Excel official soft red
+            }
+          ]
+        });
+      } catch (e) {
+        console.warn('DataBar formatting failed for Gap', e);
+      }
+    }
+
+    // 3. % Gap: Native Traffic Lights / Circular Indicators (Red >=90%, Yellow/Orange 70-89%, Dark <70%)
+    if (colPctGap) {
+      try {
+        sheet.addConditionalFormatting({
+          ref: `${colPctGap}${firstDataRowIdx}:${colPctGap}${lastDataRowIdx}`,
+          rules: [
+            {
+              type: 'iconSet',
+              iconSet: '3TrafficLights1', // Unrimmed traffic light circles matching sample
+              reverse: true, // Higher gap is Red, lower gap is Green/Dark
+              cfvo: [
+                { type: 'num', value: 0 },
+                { type: 'percent', value: 70 },
+                { type: 'percent', value: 90 }
+              ]
+            }
+          ]
+        });
+      } catch (e) {
+        console.warn('IconSet formatting failed for % Gap', e);
+      }
+    }
+  }
+
   if (isT01 && lastDataRowIdx >= firstDataRowIdx) {
     columns.forEach((col, cIdx) => {
       if (col.header.includes('Percentage (%)')) {
