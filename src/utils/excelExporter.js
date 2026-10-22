@@ -163,7 +163,7 @@ export async function exportToStyledExcel({
 
     const districtText = `District: ${reportMeta.district || 'PURBI CHAMPARAN'}`;
     const blockText = `Block: ${reportMeta.companyName?.replace(/^Block:\s*/i, '').trim() || 'KOTWA'}`;
-    const dateText = `Date:-${reportMeta.currentDate || '15-10-2026'}`;
+    const dateText = reportMeta.dateLabel?.startsWith('Date:') ? reportMeta.dateLabel : `Date:-${reportMeta.currentDate || '21-10-2026'}`;
 
     const b1End = Math.max(2, Math.floor(totalColsCount * 0.33));
     const b2End = Math.max(b1End + 1, Math.floor(totalColsCount * 0.67));
@@ -961,7 +961,7 @@ export async function exportToStyledExcel({
           };
           colCell.numFmt = '#,##0';
           colCell.alignment = { vertical: 'middle', horizontal: 'right' };
-          colCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF87171' } };
+          colCell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FF000000' } };
           return;
         }
 

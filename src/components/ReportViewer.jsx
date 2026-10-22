@@ -16,7 +16,7 @@ import {
   Edit3,
   ArrowUpDown
 } from 'lucide-react';
-import { formatValue, getT01PctColor, getVoPctColor, getVoYesNoColor, getLakhpatiProgressColor, getP01HhsHeatmapColor, getP01ShgArrow } from '../utils/formulaEngine';
+import { formatValue, getT01PctColor, getVoPctColor, getVoYesNoColor, getLakhpatiProgressColor, getLakhpatiGapCircleColor, getP01HhsHeatmapColor, getP01ShgArrow } from '../utils/formulaEngine';
 import { REPORT_THEMES } from '../utils/reportTemplates';
 import ManualDataModal from './ManualDataModal';
 
@@ -95,6 +95,21 @@ export default function ReportViewer({
     const start = (currentPage - 1) * pageSize;
     return sortedRows.slice(start, start + pageSize);
   }, [sortedRows, currentPage, pageSize]);
+
+  // Maximums for data bar proportions in Lakhpati Didi
+  const maxTotalEntry = useMemo(() => {
+    return Math.max(...rows.map(r => {
+      const v = Number(r['Total Entry'] ?? r['Total (Unique count)'] ?? 0);
+      return isNaN(v) ? 0 : v;
+    }), 1);
+  }, [rows]);
+
+  const maxGap = useMemo(() => {
+    return Math.max(...rows.map(r => {
+      const v = Number(r['Gap'] ?? 0);
+      return isNaN(v) ? 0 : v;
+    }), 1);
+  }, [rows]);
 
   // List of Gram Panchayats and current e-KYC map for the modal
   const { panchayatsList, currentEkycMap } = useMemo(() => {
@@ -270,7 +285,7 @@ export default function ReportViewer({
                 <span>Block: {reportMeta.companyName?.replace(/^Block:\s*/i, '').trim() || 'KOTWA'}</span>
               </div>
               <div className="py-2 px-3 text-center flex items-center justify-center">
-                <span>Date:-{reportMeta.currentDate || '15-10-2026'}</span>
+                <span>{reportMeta.dateLabel?.startsWith('Date:') ? reportMeta.dateLabel : `Date:-${reportMeta.currentDate || '21-10-2026'}`}</span>
               </div>
             </div>
           </div>
@@ -462,6 +477,62 @@ export default function ReportViewer({
                           );
                         }
 
+                        // Special cell rendering for Lakhpati Didi to match official report image
+                        if (isLakhpati && (col.header === 'Total Entry' || col.cellStyle === 'entry_data_bar')) {
+                          const num = typeof rawVal === 'number' ? rawVal : Number(String(rawVal || '').replace(/[$,%]/g, '').trim()) || 0;
+                          const pct = Math.min(100, Math.max(0, (num / maxTotalEntry) * 100));
+                          const formatted = formatValue(rawVal, col.format);
+
+                          return (
+                            <td key={col.id} className="border border-slate-300 py-1 px-1 relative overflow-hidden bg-white">
+                              <div
+                                className="absolute left-0 top-0.5 bottom-0.5 bg-[#52c41a]/60 rounded-xs border-r border-[#389e0d]/50 transition-all pointer-events-none"
+                                style={{ width: `${pct}%` }}
+                              />
+                              <span className="relative z-10 block text-right font-bold text-slate-900 pr-1">
+                                {formatted}
+                              </span>
+                            </td>
+                          );
+                        }
+
+                        if (isLakhpati && (col.header === 'Gap' || col.cellStyle === 'gap_red_highlight')) {
+                          const num = typeof rawVal === 'number' ? rawVal : Number(String(rawVal || '').replace(/[$,%]/g, '').trim()) || 0;
+                          const pct = Math.min(100, Math.max(0, (num / maxGap) * 100));
+                          const formatted = formatValue(rawVal, col.format);
+
+                          return (
+                            <td key={col.id} className="border border-slate-300 py-1 px-1 relative overflow-hidden bg-white">
+                              <div
+                                className="absolute left-0 top-0.5 bottom-0.5 bg-[#f87171] rounded-xs border-r border-[#ef4444]/60 transition-all pointer-events-none"
+                                style={{ width: `${pct}%` }}
+                              />
+                              <span className="relative z-10 block text-right font-bold text-slate-900 pr-1">
+                                {formatted}
+                              </span>
+                            </td>
+                          );
+                        }
+
+                        if (isLakhpati && (col.header === '% Gap' || col.cellStyle === 'pct_gap_circle')) {
+                          const circleMeta = getLakhpatiGapCircleColor(rawVal);
+                          const formatted = formatValue(rawVal, col.format);
+
+                          return (
+                            <td key={col.id} className="border border-slate-300 py-1.5 px-2 bg-white">
+                              <div className="flex items-center justify-end gap-2">
+                                <span
+                                  className={`w-3.5 h-3.5 rounded-full shrink-0 ${circleMeta.bg} inline-block shadow-2xs`}
+                                  title={circleMeta.label}
+                                />
+                                <span className="font-semibold text-slate-900">
+                                  {formatted}
+                                </span>
+                              </div>
+                            </td>
+                          );
+                        }
+
                         // Check special cell styles as in the image
                         let cellClass = 'border border-slate-300 py-1.5 px-2 whitespace-nowrap ';
 
@@ -470,13 +541,6 @@ export default function ReportViewer({
                           cellClass += `${hColor.bg} ${hColor.text} text-right font-bold `;
                         } else if (isP01 && (col.cellStyle === 'p01_shg_arrow' || col.isShgOnDate || (col.header.startsWith('SHG On') && !col.header.startsWith('SHGs')))) {
                           cellClass += 'text-center font-bold ';
-                        } else if (col.cellStyle === 'gap_red_highlight' || (isLakhpati && col.header === 'Gap')) {
-                          cellClass += 'bg-[#f87171] text-slate-900 font-bold text-right ';
-                        } else if (col.cellStyle === 'lakhpati_progress_badge' || (isLakhpati && col.header === 'Yesterday Progress')) {
-                          const pMeta = getLakhpatiProgressColor(rawVal);
-                          cellClass += `${pMeta.bg} ${pMeta.text} text-center font-bold `;
-                        } else if (isLakhpati && col.header === '% Gap') {
-                          cellClass += 'text-right font-medium text-[#c00000] ';
                         } else if (col.cellStyle === 'vo_yes_no' || (isVoIndividual && col.header.includes('Transactions Captured'))) {
                           const colorMeta = getVoYesNoColor(rawVal);
                           cellClass += `${colorMeta.bg} ${colorMeta.text} text-center font-bold `;
@@ -528,7 +592,7 @@ export default function ReportViewer({
                   isP01 ? 'bg-white text-[#c00000]' : isLakhpati ? 'bg-white text-slate-900' : isVo || isT01 ? 'bg-rose-100/80 text-slate-900' : 'bg-white text-[#c00000]'
                 }`}>
                   <td className="py-2 px-2 text-center border border-slate-300">
-                    —
+                    {isLakhpati ? '' : '—'}
                   </td>
                   {columns.map((col, cIdx) => {
                     const isFirst = cIdx === 0;
@@ -545,8 +609,8 @@ export default function ReportViewer({
                       <td
                         key={col.id}
                         className={`py-2 px-2 border border-slate-300 whitespace-nowrap ${
-                          isFirst ? 'text-center font-extrabold text-sm' : 'text-right font-bold'
-                        } ${isLakhpati && col.header === 'Gap' ? 'bg-[#f87171]' : ''}`}
+                          isFirst ? 'text-center font-extrabold text-sm' : 'text-right font-extrabold'
+                        }`}
                       >
                         {displayVal}
                       </td>

@@ -523,7 +523,38 @@ export function generateP01Columns(date = '13-10-2026', period = 'October-2026')
 }
 
 /**
+ * Kotwa Block pre-assigned standard Lakhpati Didi targets per Gram Panchayat
+ */
+export const KOTWA_LAKHPATI_TARGETS = {
+  'POKHARA': 595,
+  'MACHHARGAWA': 554,
+  'BHOPATPUR NORTH': 526,
+  'MAHARANI BHOPTA': 549,
+  'JASAULI': 448,
+  'BHOPATPUR SOUTH': 545,
+  'JASAULI PATTI': 394,
+  'KARARIYA': 408,
+  'AHIRAULIYA': 364,
+  'JAGIRAHA': 394,
+  'DUMRA': 358,
+  'KOTWA': 394,
+  'GOPI CHHAPRA': 316,
+  'BHAHARWA KALA EAST': 358,
+  'BATHANA': 328,
+  'BHAHARWA KALA WEST': 432
+};
+
+/**
  * Dynamically builds column definitions for Lakhpati Didi Entry Status Report
+ * Exactly replicates the 8 columns in the official government sample report:
+ * 1. S.No
+ * 2. Gram Panchayat
+ * 3. Active Approved Potential Didis
+ * 4. Target
+ * 5. Total Entry (from "Total (Unique count)")
+ * 6. % Entry
+ * 7. Gap
+ * 8. % Gap
  */
 export function generateLakhpatiColumns() {
   return [
@@ -539,8 +570,9 @@ export function generateLakhpatiColumns() {
       id: 'col_active_didis',
       header: 'Active Approved Potential Didis',
       type: 'source',
-      sourceCol: 'Active Approved Potential Lakhpati Didi',
-      fallbackCol: 'Active Approved Potential Didis',
+      sourceCol: 'Active Approved Potential Didis',
+      fallbackCol: 'Active Approved Potential Lakhpati Didi',
+      fallbackPattern: 'Active Approved Potential',
       format: 'number',
       summaryOp: 'sum'
     },
@@ -560,8 +592,9 @@ export function generateLakhpatiColumns() {
       id: 'col_total_entry',
       header: 'Total Entry',
       type: 'source',
-      sourceCol: 'Aajeevika Register for Potential Lakhpati Didi PLD Entered',
+      sourceCol: 'Total (Unique count)',
       fallbackCol: 'Total Entry',
+      fallbackPattern: 'Total (Unique count)|PLD Entered|Total Entry',
       format: 'number',
       summaryOp: 'sum',
       cellStyle: 'entry_data_bar'
@@ -592,21 +625,8 @@ export function generateLakhpatiColumns() {
       formula: 'IF([Target] > 0, ([Gap] / [Target]) * 100, 0)',
       format: 'percent',
       summaryOp: 'weighted_pct_lakhpati_gap',
-      cellStyle: 'pct_gap',
+      cellStyle: 'pct_gap_circle',
       headerColor: '#c00000'
-    },
-    {
-      id: 'col_yesterday_progress',
-      header: 'Yesterday Progress',
-      type: 'manual',
-      isManualEditable: true,
-      manualKey: 'yesterday_progress',
-      sourceCol: 'Yesterday Progress',
-      fallbackCol: 'Yesterday Progress',
-      format: 'integer',
-      summaryOp: 'sum',
-      cellStyle: 'lakhpati_progress_badge',
-      helpText: 'Click or type to edit yesterday progress'
     }
   ];
 }
@@ -644,13 +664,13 @@ export const REPORT_TOPICS = [
     companyName: 'Block: KOTWA',
     district: 'PURBI CHAMPARAN',
     block: 'KOTWA',
-    dateLabel: 'Date:-15-10-2026',
-    currentDate: '15-10-2026',
+    dateLabel: 'Date:-21-10-2026',
+    currentDate: '21-10-2026',
     theme: 'lakhpati_yellow',
     layoutType: 'lakhpati_grid',
     sortByCol: 'Gap',
     sortDir: 'desc',
-    description: 'Official Lakhpati Didi Entry Status format: Tracks Active Potential Didis, Targets (editable inline), Total Entry, % Entry, Gap ranking, % Gap, and Yesterday Progress (editable & color coded).',
+    description: 'Official Lakhpati Didi Entry Status format matching A05 raw portal export: uses Total (Unique count) as Total Entry, ranks by Gap descending with green entry data bars, red gap bars, and traffic light indicator circles.',
     columns: generateLakhpatiColumns()
   },
   {

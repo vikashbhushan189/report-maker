@@ -2,6 +2,7 @@
  * Formula Evaluation & Report Generation Engine
  * Safely parses and calculates column formulas, summaries, and transformations.
  */
+import { KOTWA_LAKHPATI_TARGETS } from './reportTemplates';
 
 /**
  * Format a numeric value according to column formatting rules
@@ -186,7 +187,7 @@ export function generateReportData(
     columnConfigs.forEach(col => {
       let rawVal = 0;
 
-      // Handle Manual Editable Columns (e.g. Previous day e-KYC 10-10-2026, Target, Yesterday Progress)
+      // Handle Manual Editable Columns (e.g. Previous day e-KYC 10-10-2026, Target)
       if (col.isManualEditable || col.type === 'manual') {
         const keyWithColId = col.id ? `${col.id}_${panchayatName}` : null;
         const keyWithManualKey = col.manualKey ? `${col.manualKey}_${panchayatName}` : null;
@@ -201,18 +202,58 @@ export function generateReportData(
           rawVal = Number(rawRow[col.sourceCol]);
         } else if (col.fallbackCol && rawRow[col.fallbackCol] !== undefined && rawRow[col.fallbackCol] !== '') {
           rawVal = Number(rawRow[col.fallbackCol]);
-        } else if ((col.id === 'col_target' || col.header === 'Target') && rawRow['Active Approved Potential Lakhpati Didi']) {
-          rawVal = Math.round(Number(rawRow['Active Approved Potential Lakhpati Didi']) * 0.625);
+        } else if (col.id === 'col_target' || col.header === 'Target') {
+          const upperGp = panchayatName.toUpperCase().trim();
+          if (KOTWA_LAKHPATI_TARGETS && KOTWA_LAKHPATI_TARGETS[upperGp] !== undefined) {
+            rawVal = KOTWA_LAKHPATI_TARGETS[upperGp];
+          } else {
+            const activeDidis = Number(rawRow['Active Approved Potential Didis'] ?? rawRow['Active Approved Potential Lakhpati Didi'] ?? 0);
+            rawVal = activeDidis > 0 ? Math.round(activeDidis * 0.625) : 0;
+          }
         } else {
           rawVal = 0;
         }
       } else if (col.type === 'source') {
-        if (rawRow[col.sourceCol] !== undefined && rawRow[col.sourceCol] !== '') {
+        // Special mapping for Lakhpati Total Entry ("Total (Unique count)" from raw sheet)
+        if (col.id === 'col_total_entry' || col.header === 'Total Entry') {
+          if (rawRow['Total (Unique count)'] !== undefined && rawRow['Total (Unique count)'] !== '') {
+            rawVal = rawRow['Total (Unique count)'];
+          } else if (rawRow['Total Entry'] !== undefined && rawRow['Total Entry'] !== '') {
+            rawVal = rawRow['Total Entry'];
+          } else if (rawRow['Aajeevika Register for Potential Lakhpati Didi PLD Entered'] !== undefined && rawRow['Aajeevika Register for Potential Lakhpati Didi PLD Entered'] !== '') {
+            rawVal = rawRow['Aajeevika Register for Potential Lakhpati Didi PLD Entered'];
+          } else {
+            const matchedKey = Object.keys(rawRow).find(k => /unique count/i.test(k) || /pld entered/i.test(k) || /total entry/i.test(k));
+            rawVal = matchedKey ? rawRow[matchedKey] : 0;
+          }
+          if (typeof rawVal === 'string') {
+            const clean = Number(rawVal.replace(/,/g, '').trim());
+            rawVal = isNaN(clean) ? 0 : clean;
+          }
+        } else if (col.id === 'col_active_didis' || col.header === 'Active Approved Potential Didis') {
+          if (rawRow['Active Approved Potential Didis'] !== undefined && rawRow['Active Approved Potential Didis'] !== '') {
+            rawVal = rawRow['Active Approved Potential Didis'];
+          } else if (rawRow['Active Approved Potential Lakhpati Didi'] !== undefined && rawRow['Active Approved Potential Lakhpati Didi'] !== '') {
+            rawVal = rawRow['Active Approved Potential Lakhpati Didi'];
+          } else {
+            const matchedKey = Object.keys(rawRow).find(k => /active approved/i.test(k));
+            rawVal = matchedKey ? rawRow[matchedKey] : 0;
+          }
+          if (typeof rawVal === 'string') {
+            const clean = Number(rawVal.replace(/,/g, '').trim());
+            rawVal = isNaN(clean) ? 0 : clean;
+          }
+        } else if (rawRow[col.sourceCol] !== undefined && rawRow[col.sourceCol] !== '') {
           rawVal = rawRow[col.sourceCol];
         } else if (col.fallbackCol && rawRow[col.fallbackCol] !== undefined && rawRow[col.fallbackCol] !== '') {
           rawVal = rawRow[col.fallbackCol];
         } else if (col.fallbackPattern) {
-          const matchedKey = Object.keys(rawRow).find(k => k.toLowerCase().includes(col.fallbackPattern.toLowerCase()));
+          const patterns = col.fallbackPattern.split('|');
+          let matchedKey = null;
+          for (const pat of patterns) {
+            matchedKey = Object.keys(rawRow).find(k => k.toLowerCase().includes(pat.toLowerCase().trim()));
+            if (matchedKey) break;
+          }
           if (matchedKey && rawRow[matchedKey] !== undefined && rawRow[matchedKey] !== '') {
             rawVal = rawRow[matchedKey];
           } else {
@@ -361,7 +402,7 @@ export function generateReportData(
 
   // 7. Weighted Percentage Totals for Lakhpati Didi Columns (% Entry & % Gap)
   const targetTotal = totals['Target'];
-  const totalEntryTotal = totals['Total Entry'] ?? totals['Aajeevika Register for Potential Lakhpati Didi PLD Entered'];
+  const totalEntryTotal = totals['Total Entry'] ?? totals['Total (Unique count)'] ?? totals['Aajeevika Register for Potential Lakhpati Didi PLD Entered'];
   const gapTotal = totals['Gap'];
 
   if (targetTotal && Number(targetTotal) > 0) {
@@ -377,6 +418,27 @@ export function generateReportData(
     rows: calculatedRows,
     totals
   };
+}
+
+/**
+ * Circular indicator dot for Lakhpati Didi % Gap
+ * Matches the official sample report circles:
+ * >= 90% -> Deep Red Circle 🔴 (#c00000)
+ * 70% - 89.9% -> Peach/Orange Circle 🟠 (#fb923c)
+ * < 70% -> Dark Charcoal Circle ⚫ (#1e293b)
+ */
+export function getLakhpatiGapCircleColor(val) {
+  const num = typeof val === 'number' ? val : Number(String(val || '').replace(/[%,]/g, '').trim());
+  if (isNaN(num)) {
+    return { bg: 'bg-slate-400', excelArgb: 'FF94A3B8', label: '—' };
+  }
+  if (num >= 90) {
+    return { bg: 'bg-[#c00000]', excelArgb: 'FFC00000', label: 'Critical Gap (>=90%)' };
+  }
+  if (num >= 70) {
+    return { bg: 'bg-[#fb923c]', excelArgb: 'FFFB923C', label: 'Medium Gap (70-89%)' };
+  }
+  return { bg: 'bg-[#1e293b]', excelArgb: 'FF1E293B', label: 'Lower Gap (<70%)' };
 }
 
 /**

@@ -162,7 +162,7 @@ export default function FastReportGenerator({
           </div>
 
           <div className="text-[10px] text-slate-500 mt-1 truncate">
-            Current: <span className="font-semibold text-slate-700">{fileName || (selectedTopicId === 'lakhpati_didi' ? 'A02_Digital_Aajeevika_Register_Report_Kotwa.xlsx' : selectedTopicId === 't01_vo_individual' ? 'T01_VO_Transactions_Individual_Kotwa.xlsx' : selectedTopicId === 't01_vo_transactions' ? 'T01_VO_Transactions_Kotwa.xlsx' : selectedTopicId === 't01_transactions' ? 'T01_SHG_Transactions_Kotwa.xlsx' : 'S01_Member_KYC_Details_Kotwa.xlsx')}</span>
+            Current: <span className="font-semibold text-slate-700">{fileName || (selectedTopicId === 'lakhpati_didi' ? 'A05_Aajeevika_Livelihood_Income_Report_Kotwa.xlsx' : selectedTopicId === 't01_vo_individual' ? 'T01_VO_Transactions_Individual_Kotwa.xlsx' : selectedTopicId === 't01_vo_transactions' ? 'T01_VO_Transactions_Kotwa.xlsx' : selectedTopicId === 't01_transactions' ? 'T01_SHG_Transactions_Kotwa.xlsx' : 'S01_Member_KYC_Details_Kotwa.xlsx')}</span>
           </div>
         </div>
 
@@ -199,7 +199,7 @@ export default function FastReportGenerator({
                 <span className="text-[9px] text-slate-400 block truncate">Date</span>
                 <input
                   type="text"
-                  value={reportMeta.currentDate || (selectedTopicId === 'lakhpati_didi' ? '15-10-2026' : '13-10-2026')}
+                  value={reportMeta.currentDate || (selectedTopicId === 'lakhpati_didi' ? '21-10-2026' : '13-10-2026')}
                   onChange={(e) => setReportMeta({ ...reportMeta, currentDate: e.target.value, dateLabel: `Date:-${e.target.value}` })}
                   className="w-full bg-white border border-slate-300 rounded px-1.5 py-1 text-[11px] font-bold text-slate-800 focus:outline-hidden"
                 />

@@ -130,7 +130,7 @@ export default function App() {
     const defaultDateLabel = isP01
       ? (topic.dateLabel || 'Date:-14-10-2026')
       : isLakhpati
-      ? (topic.dateLabel || 'Date:-15-10-2026')
+      ? (topic.dateLabel || 'Date:-21-10-2026')
       : isVoIndividual
       ? (topic.dateLabel || 'Date:-12-10-2026')
       : isVo
@@ -151,8 +151,8 @@ export default function App() {
       yesterdayDate: prev.yesterdayDate || topic.yesterdayDate || '12-10-2026',
       dayBeforeYesterdayDate: prev.dayBeforeYesterdayDate || topic.dayBeforeYesterdayDate || '10-10-2026',
       dateLabel: defaultDateLabel,
-      currentDate: isP01 ? (topic.currentDate || '14-10-2026') : isLakhpati ? (topic.currentDate || '15-10-2026') : isVoIndividual ? (topic.currentDate || '12-10-2026') : isVo ? (topic.currentDate || '13-10-2026') : isT01 ? (topic.currentDate || '10-10-2026') : (prev.todayDate || '13-10-2026'),
-      prevDate: isP01 ? '13-10-2026' : isLakhpati ? '14-10-2026' : isVoIndividual ? '10-10-2026' : isVo ? '10-10-2026' : isT01 ? (topic.prevDate || '10-10-2026') : (prev.yesterdayDate || '12-10-2026'),
+      currentDate: isP01 ? (topic.currentDate || '14-10-2026') : isLakhpati ? (topic.currentDate || '21-10-2026') : isVoIndividual ? (topic.currentDate || '12-10-2026') : isVo ? (topic.currentDate || '13-10-2026') : isT01 ? (topic.currentDate || '10-10-2026') : (prev.todayDate || '13-10-2026'),
+      prevDate: isP01 ? '13-10-2026' : isLakhpati ? '20-10-2026' : isVoIndividual ? '10-10-2026' : isVo ? '10-10-2026' : isT01 ? (topic.prevDate || '10-10-2026') : (prev.yesterdayDate || '12-10-2026'),
       reportDate: isP01 ? (topic.reportDate || '13-10-2026') : prev.reportDate,
       period: isP01 ? (topic.period || 'October-2026') : prev.period,
       theme: topic.theme || (isLakhpati ? 'lakhpati_yellow' : 'ekyc_olive'),
@@ -302,9 +302,9 @@ export default function App() {
     const isP01Data = parsed.metadata?.reportType === 'p01_shg_households' ||
       parsed.headers.some(h => h.includes('Till March-23') || h.includes('Members in Cumulative') || h.includes('SHGs in Cumulative'));
 
-    // Check if uploaded data is Lakhpati Didi / Aajeevika Register
+    // Check if uploaded data is Lakhpati Didi / Aajeevika Register / A05 Income Report
     const isLakhpatiData = !isP01Data && (parsed.metadata?.reportType === 'lakhpati_didi' ||
-      parsed.headers.some(h => h.includes('Potential Lakhpati Didi') || h.includes('Aajeevika Register') || h.includes('Active Approved Potential Didis')));
+      parsed.headers.some(h => /total \(unique count\)/i.test(h) || /aajeevika/i.test(h) || /potential lakhpati didi/i.test(h) || /active approved potential/i.test(h)));
 
     // Check if uploaded data is VO Individual
     const isVoIndividualData = !isP01Data && !isLakhpatiData && (parsed.metadata?.reportType === 't01_vo_individual' ||
@@ -344,6 +344,8 @@ export default function App() {
 
       setColumns(generateP01Columns(pDate, pPeriod));
     } else if (isLakhpatiData) {
+      const detectedDate = parsed.metadata?.detectedDate || '21-10-2026';
+
       setSelectedTopicId('lakhpati_didi');
       setReportMeta(prev => ({
         ...prev,
@@ -353,8 +355,8 @@ export default function App() {
         district: parsed.metadata?.district || 'PURBI CHAMPARAN',
         companyName: `Block: ${parsed.metadata?.block || 'KOTWA'}`,
         panchayat: 'All Panchayats',
-        dateLabel: 'Date:-15-10-2026',
-        currentDate: '15-10-2026',
+        dateLabel: `Date:-${detectedDate}`,
+        currentDate: detectedDate,
         theme: 'lakhpati_yellow',
         layoutType: 'lakhpati_grid',
         sortByCol: 'Gap',

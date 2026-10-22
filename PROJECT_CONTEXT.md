@@ -45,6 +45,33 @@ Replicates the official government report layout:
 
 ---
 
+### Report Topic: `Lakhpati Didi Entry Status Report - (Q2 : Jul-sep), 2026-27`
+Replicates the official government Lakhpati Didi report layout from raw portal export `A05 (A) - Aajeevika Livelihood Income Report`:
+1. **Header Layout**:
+   - Centered bold red title: `Lakhpati Didi Entry Status Report - (Q2 : Jul-sep), 2026-27`
+   - 3-Box Subheader Row:
+     - Box 1: `District: PURBI CHAMPARAN`
+     - Box 2: `Block: KOTWA`
+     - Box 3: `Date:-21-10-2026` (dynamically extracted from portal download timestamp)
+2. **Table Header**:
+   - Bright Yellow background fill (`#FFFF00`) with bold Red text (`#C00000`).
+3. **8 Exact Columns**:
+   1. `S.No`
+   2. `Gram Panchayat`
+   3. `Active Approved Potential Didis` (from raw column `Active Approved Potential Didis`)
+   4. `Target` (pre-assigned standard Kotwa targets, e.g., 595 for Pokhara down to 316 for Gopi Chhapra, total 6,963, editable)
+   5. `Total Entry` (mapped directly from raw column **`Total (Unique count)`**, with green horizontal data bar fill)
+   6. `% Entry` (formula: `(Total Entry / Target) * 100`)
+   7. `Gap` (formula: `Target - Total Entry`, with red horizontal data bar fill, ranked descending)
+   8. `% Gap` (formula: `(Gap / Target) * 100`, with circular indicator dots: 🔴 for $\ge 90\%$, 🟠 for $70-89.9\%$, ⚫ for $< 70\%$)
+4. **Panchayat Ranking**:
+   - Ranked by **`Gap` in descending order** (POKHARA at 583 down to BHAHARWA KALA WEST at 156).
+5. **Total Row**:
+   - Bold black text across all columns with exact aggregate sums and weighted ratio percentages:
+     `Active Approved: 11179` | `Target: 6963` | `Total Entry: 885` | `% Entry: 12.71%` | `Gap: 6078` | `% Gap: 87.29%`.
+
+---
+
 ## 📑 Raw Data Portal Structure (Handled Automatically)
 In the raw Excel export from the portal:
 - **Rows 1 & 2**: Header title & metadata (`Period: 2026-10`, `State: BIHAR`, `District: PURBI CHAMPARAN`, `Block: KOTWA`, `Panchayat: All Panchayats`).

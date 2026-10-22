@@ -901,42 +901,40 @@ export const SAMPLE_DATASETS = {
 
   lakhpati_didi: {
     name: 'Lakhpati Didi Entry Status Report (16 Panchayats)',
-    description: 'Kotwa Block: 16 Gram Panchayats with Active Potential Didis, Targets, Total Entry, and Yesterday Progress.',
-    filename: 'A02_Digital_Aajeevika_Register_Report_Kotwa.xlsx',
+    description: 'Kotwa Block: 16 Gram Panchayats with Total (Unique count) from A05 Aajeevika Income report, Targets, % Entry, Gap, and % Gap.',
+    filename: 'A05_Aajeevika_Livelihood_Income_Report_Kotwa.xlsx',
     defaultPreset: 'lakhpati_didi',
     meta: {
       block: 'KOTWA',
       district: 'PURBI CHAMPARAN',
       state: 'BIHAR',
-      date: '15-10-2026'
+      date: '21-10-2026'
     },
     portalTotals: {
       excelRow: 4,
       'Gram Panchayat': 'Total',
-      'Active Approved Potential Lakhpati Didi': 11179,
       'Active Approved Potential Didis': 11179,
       'Target': 6963,
-      'Aajeevika Register for Potential Lakhpati Didi PLD Entered': 391,
-      'Total Entry': 391,
-      'Yesterday Progress': 165
+      'Total (Unique count)': 885,
+      'Total Entry': 885
     },
     data: [
-      { _excelRowNumber: 5, _sno: 1, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'KOTWA', 'Gram Panchayat': 'POKHARA', 'Active Approved Potential Lakhpati Didi': 967, 'Active Approved Potential Didis': 967, 'Target': 595, 'Aajeevika Register for Potential Lakhpati Didi PLD Entered': 9, 'Total Entry': 9, 'Yesterday Progress': 8 },
-      { _excelRowNumber: 6, _sno: 2, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'KOTWA', 'Gram Panchayat': 'MAHARANI BHOPTA', 'Active Approved Potential Lakhpati Didi': 879, 'Active Approved Potential Didis': 879, 'Target': 549, 'Aajeevika Register for Potential Lakhpati Didi PLD Entered': 0, 'Total Entry': 0, 'Yesterday Progress': 0 },
-      { _excelRowNumber: 7, _sno: 3, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'KOTWA', 'Gram Panchayat': 'BHOPATPUR SOUTH', 'Active Approved Potential Lakhpati Didi': 887, 'Active Approved Potential Didis': 887, 'Target': 545, 'Aajeevika Register for Potential Lakhpati Didi PLD Entered': 2, 'Total Entry': 2, 'Yesterday Progress': 0 },
-      { _excelRowNumber: 8, _sno: 4, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'KOTWA', 'Gram Panchayat': 'MACHHARGAWA', 'Active Approved Potential Lakhpati Didi': 886, 'Active Approved Potential Didis': 886, 'Target': 554, 'Aajeevika Register for Potential Lakhpati Didi PLD Entered': 26, 'Total Entry': 26, 'Yesterday Progress': 26 },
-      { _excelRowNumber: 9, _sno: 5, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'KOTWA', 'Gram Panchayat': 'BHOPATPUR NORTH', 'Active Approved Potential Lakhpati Didi': 842, 'Active Approved Potential Didis': 842, 'Target': 526, 'Aajeevika Register for Potential Lakhpati Didi PLD Entered': 0, 'Total Entry': 0, 'Yesterday Progress': 0 },
-      { _excelRowNumber: 10, _sno: 6, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'KOTWA', 'Gram Panchayat': 'JASAULI', 'Active Approved Potential Lakhpati Didi': 713, 'Active Approved Potential Didis': 713, 'Target': 448, 'Aajeevika Register for Potential Lakhpati Didi PLD Entered': 29, 'Total Entry': 29, 'Yesterday Progress': 16 },
-      { _excelRowNumber: 11, _sno: 7, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'KOTWA', 'Gram Panchayat': 'JASAULI PATTI', 'Active Approved Potential Lakhpati Didi': 631, 'Active Approved Potential Didis': 631, 'Target': 394, 'Aajeevika Register for Potential Lakhpati Didi PLD Entered': 0, 'Total Entry': 0, 'Yesterday Progress': 0 },
-      { _excelRowNumber: 12, _sno: 8, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'KOTWA', 'Gram Panchayat': 'KARARIYA', 'Active Approved Potential Lakhpati Didi': 668, 'Active Approved Potential Didis': 668, 'Target': 408, 'Aajeevika Register for Potential Lakhpati Didi PLD Entered': 21, 'Total Entry': 21, 'Yesterday Progress': 21 },
-      { _excelRowNumber: 13, _sno: 9, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'KOTWA', 'Gram Panchayat': 'JAGIRAHA', 'Active Approved Potential Lakhpati Didi': 630, 'Active Approved Potential Didis': 630, 'Target': 394, 'Aajeevika Register for Potential Lakhpati Didi PLD Entered': 11, 'Total Entry': 11, 'Yesterday Progress': 0 },
-      { _excelRowNumber: 14, _sno: 10, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'KOTWA', 'Gram Panchayat': 'KOTWA', 'Active Approved Potential Lakhpati Didi': 631, 'Active Approved Potential Didis': 631, 'Target': 394, 'Aajeevika Register for Potential Lakhpati Didi PLD Entered': 12, 'Total Entry': 12, 'Yesterday Progress': 0 },
-      { _excelRowNumber: 15, _sno: 11, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'KOTWA', 'Gram Panchayat': 'AHIRAULIYA', 'Active Approved Potential Lakhpati Didi': 581, 'Active Approved Potential Didis': 581, 'Target': 364, 'Aajeevika Register for Potential Lakhpati Didi PLD Entered': 12, 'Total Entry': 12, 'Yesterday Progress': 12 },
-      { _excelRowNumber: 16, _sno: 12, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'KOTWA', 'Gram Panchayat': 'DUMRA', 'Active Approved Potential Lakhpati Didi': 572, 'Active Approved Potential Didis': 572, 'Target': 358, 'Aajeevika Register for Potential Lakhpati Didi PLD Entered': 18, 'Total Entry': 18, 'Yesterday Progress': 18 },
-      { _excelRowNumber: 17, _sno: 13, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'KOTWA', 'Gram Panchayat': 'BATHANA', 'Active Approved Potential Lakhpati Didi': 525, 'Active Approved Potential Didis': 525, 'Target': 328, 'Aajeevika Register for Potential Lakhpati Didi PLD Entered': 10, 'Total Entry': 10, 'Yesterday Progress': 0 },
-      { _excelRowNumber: 18, _sno: 14, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'KOTWA', 'Gram Panchayat': 'GOPI CHHAPRA', 'Active Approved Potential Lakhpati Didi': 503, 'Active Approved Potential Didis': 503, 'Target': 316, 'Aajeevika Register for Potential Lakhpati Didi PLD Entered': 1, 'Total Entry': 1, 'Yesterday Progress': 0 },
-      { _excelRowNumber: 19, _sno: 15, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'KOTWA', 'Gram Panchayat': 'BHAHARWA KALA EAST', 'Active Approved Potential Lakhpati Didi': 573, 'Active Approved Potential Didis': 573, 'Target': 358, 'Aajeevika Register for Potential Lakhpati Didi PLD Entered': 50, 'Total Entry': 50, 'Yesterday Progress': 15 },
-      { _excelRowNumber: 20, _sno: 16, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'KOTWA', 'Gram Panchayat': 'BHAHARWA KALA WEST', 'Active Approved Potential Lakhpati Didi': 691, 'Active Approved Potential Didis': 691, 'Target': 432, 'Aajeevika Register for Potential Lakhpati Didi PLD Entered': 190, 'Total Entry': 190, 'Yesterday Progress': 49 }
+      { _excelRowNumber: 5, _sno: 1, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'KOTWA', 'Gram Panchayat': 'POKHARA', 'Active Approved Potential Didis': 967, 'Target': 595, 'Total (Unique count)': 12, 'Total Entry': 12 },
+      { _excelRowNumber: 6, _sno: 2, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'KOTWA', 'Gram Panchayat': 'MACHHARGAWA', 'Active Approved Potential Didis': 886, 'Target': 554, 'Total (Unique count)': 26, 'Total Entry': 26 },
+      { _excelRowNumber: 7, _sno: 3, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'KOTWA', 'Gram Panchayat': 'BHOPATPUR NORTH', 'Active Approved Potential Didis': 842, 'Target': 526, 'Total (Unique count)': 1, 'Total Entry': 1 },
+      { _excelRowNumber: 8, _sno: 4, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'KOTWA', 'Gram Panchayat': 'MAHARANI BHOPTA', 'Active Approved Potential Didis': 879, 'Target': 549, 'Total (Unique count)': 32, 'Total Entry': 32 },
+      { _excelRowNumber: 9, _sno: 5, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'KOTWA', 'Gram Panchayat': 'JASAULI', 'Active Approved Potential Didis': 713, 'Target': 448, 'Total (Unique count)': 29, 'Total Entry': 29 },
+      { _excelRowNumber: 10, _sno: 6, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'KOTWA', 'Gram Panchayat': 'BHOPATPUR SOUTH', 'Active Approved Potential Didis': 887, 'Target': 545, 'Total (Unique count)': 131, 'Total Entry': 131 },
+      { _excelRowNumber: 11, _sno: 7, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'KOTWA', 'Gram Panchayat': 'JASAULI PATTI', 'Active Approved Potential Didis': 631, 'Target': 394, 'Total (Unique count)': 1, 'Total Entry': 1 },
+      { _excelRowNumber: 12, _sno: 8, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'KOTWA', 'Gram Panchayat': 'KARARIYA', 'Active Approved Potential Didis': 668, 'Target': 408, 'Total (Unique count)': 43, 'Total Entry': 43 },
+      { _excelRowNumber: 13, _sno: 9, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'KOTWA', 'Gram Panchayat': 'AHIRAULIYA', 'Active Approved Potential Didis': 581, 'Target': 364, 'Total (Unique count)': 19, 'Total Entry': 19 },
+      { _excelRowNumber: 14, _sno: 10, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'KOTWA', 'Gram Panchayat': 'JAGIRAHA', 'Active Approved Potential Didis': 630, 'Target': 394, 'Total (Unique count)': 51, 'Total Entry': 51 },
+      { _excelRowNumber: 15, _sno: 11, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'KOTWA', 'Gram Panchayat': 'DUMRA', 'Active Approved Potential Didis': 572, 'Target': 358, 'Total (Unique count)': 18, 'Total Entry': 18 },
+      { _excelRowNumber: 16, _sno: 12, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'KOTWA', 'Gram Panchayat': 'KOTWA', 'Active Approved Potential Didis': 631, 'Target': 394, 'Total (Unique count)': 68, 'Total Entry': 68 },
+      { _excelRowNumber: 17, _sno: 13, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'KOTWA', 'Gram Panchayat': 'GOPI CHHAPRA', 'Active Approved Potential Didis': 503, 'Target': 316, 'Total (Unique count)': 1, 'Total Entry': 1 },
+      { _excelRowNumber: 18, _sno: 14, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'KOTWA', 'Gram Panchayat': 'BHAHARWA KALA EAST', 'Active Approved Potential Didis': 573, 'Target': 358, 'Total (Unique count)': 98, 'Total Entry': 98 },
+      { _excelRowNumber: 19, _sno: 15, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'KOTWA', 'Gram Panchayat': 'BATHANA', 'Active Approved Potential Didis': 525, 'Target': 328, 'Total (Unique count)': 79, 'Total Entry': 79 },
+      { _excelRowNumber: 20, _sno: 16, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'KOTWA', 'Gram Panchayat': 'BHAHARWA KALA WEST', 'Active Approved Potential Didis': 691, 'Target': 432, 'Total (Unique count)': 276, 'Total Entry': 276 }
     ]
   },
 

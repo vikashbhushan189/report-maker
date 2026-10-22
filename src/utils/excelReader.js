@@ -133,7 +133,15 @@ export function extractSheetData(workbook, sheetName) {
     } else if (rowStr.toLowerCase().includes('transactions monitoring') || rowStr.toLowerCase().includes('t01')) {
       metadata.title = 'T01 - SHG Transactions Monitoring Status';
       metadata.reportType = 't01';
-    } else if (rowStr.toLowerCase().includes('digital aajeevika register') || rowStr.toLowerCase().includes('lakhpati didi') || rowStr.toLowerCase().includes('a02')) {
+    } else if (
+      rowStr.toLowerCase().includes('digital aajeevika register') ||
+      rowStr.toLowerCase().includes('lakhpati didi') ||
+      rowStr.toLowerCase().includes('a02') ||
+      rowStr.toLowerCase().includes('a05') ||
+      rowStr.toLowerCase().includes('aajeevika livelihood income') ||
+      rowStr.toLowerCase().includes('income report') ||
+      rowStr.toLowerCase().includes('total (unique count)')
+    ) {
       metadata.title = 'Lakhpati Didi Entry Status Report - (Q2 : Jul-sep), 2026-27';
       metadata.reportType = 'lakhpati_didi';
     } else if (rowStr.toLowerCase().includes('member kyc details')) {
@@ -156,11 +164,18 @@ export function extractSheetData(workbook, sheetName) {
     if (panchayatMatch) metadata.panchayat = panchayatMatch[1].trim();
   }
 
-  // Look for bottom footer (e.g. "User ID: IBR_KOTWA & Downloaded on: ...")
+  // Look for bottom footer (e.g. "User ID: IBR_KOTWA & Downloaded on: 21 October 2026 at 12:50:01 pm")
   for (let i = rawJson.length - 1; i >= Math.max(0, rawJson.length - 4); i--) {
     const rowStr = rawJson[i].map(c => String(c || '').trim()).join(' ');
     if (rowStr.toLowerCase().includes('downloaded on:')) {
       metadata.downloadInfo = rowStr;
+      const dlMatch = rowStr.match(/downloaded on:\s*(\d{1,2})\s*([a-zA-Z]+)\s*(\d{4})/i);
+      if (dlMatch) {
+        const day = String(dlMatch[1]).padStart(2, '0');
+        const monthMap = { january: '01', february: '02', march: '03', april: '04', may: '05', june: '06', july: '07', august: '08', september: '09', october: '10', november: '11', december: '12' };
+        const mNum = monthMap[dlMatch[2].toLowerCase()] || '10';
+        metadata.detectedDate = `${day}-${mNum}-${dlMatch[3]}`;
+      }
       break;
     }
   }
