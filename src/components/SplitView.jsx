@@ -19,7 +19,11 @@ export default function SplitView({
   isExporting,
   manualValues = {},
   onSaveManualValues,
-  onUpdateSingleManualValue
+  onUpdateSingleManualValue,
+  selectedTargetBlockId,
+  onSelectTargetBlock,
+  savedBlockTargets,
+  onOpenTargetModal
 }) {
   return (
     <div className="space-y-4">
@@ -76,6 +80,10 @@ export default function SplitView({
             manualValues={manualValues}
             onSaveManualValues={onSaveManualValues}
             onUpdateSingleManualValue={onUpdateSingleManualValue}
+            selectedTargetBlockId={selectedTargetBlockId}
+            onSelectTargetBlock={onSelectTargetBlock}
+            savedBlockTargets={savedBlockTargets}
+            onOpenTargetModal={onOpenTargetModal}
           />
         </div>
       </div>

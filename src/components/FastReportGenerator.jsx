@@ -12,7 +12,8 @@ import {
   Eye,
   SlidersHorizontal,
   ChevronDown,
-  Info
+  Info,
+  Target
 } from 'lucide-react';
 import { REPORT_TOPICS } from '../utils/reportTemplates';
 
@@ -32,7 +33,11 @@ export default function FastReportGenerator({
   setActiveTab,
   availableMonths = [],
   selectedMonths = [],
-  onToggleMonth
+  onToggleMonth,
+  selectedTargetBlockId = 'KOTWA',
+  onSelectTargetBlock,
+  savedBlockTargets = {},
+  onOpenTargetModal
 }) {
   const fileInputRef = useRef(null);
   const [showPasteModal, setShowPasteModal] = useState(false);
@@ -357,6 +362,68 @@ export default function FastReportGenerator({
                 </button>
               );
             })}
+          </div>
+        </div>
+      )}
+
+      {/* Target Preset Selector for Lakhpati Didi Report */}
+      {selectedTopicId === 'lakhpati_didi' && savedBlockTargets && Object.keys(savedBlockTargets).length > 0 && (
+        <div className="bg-gradient-to-r from-amber-50/90 to-emerald-50/90 border-2 border-amber-300/80 rounded-xl p-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xs">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-amber-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+              <Target className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs font-bold text-amber-950">
+                  Target Preset:
+                </span>
+                <span className="text-xs font-extrabold text-emerald-900 bg-emerald-100/90 px-2 py-0.5 rounded-md border border-emerald-300/60">
+                  {savedBlockTargets[selectedTargetBlockId]?.blockName || selectedTargetBlockId}
+                </span>
+                <span className="text-xs font-bold text-[#c00000]">
+                  Target Sum: {Number(savedBlockTargets[selectedTargetBlockId]?.totalTarget || 0).toLocaleString('en-IN')}
+                </span>
+              </div>
+              <p className="text-[10px] text-amber-900/80 mt-0.5">
+                Click a saved block preset below to automatically fill Panchayat targets and calculate live % Entry and Gap formulas.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            {Object.entries(savedBlockTargets).map(([bId, preset]) => {
+              const isSelected = selectedTargetBlockId === bId;
+              return (
+                <button
+                  key={bId}
+                  type="button"
+                  onClick={() => onSelectTargetBlock && onSelectTargetBlock(bId)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-2xs cursor-pointer ${
+                    isSelected
+                      ? 'bg-amber-600 text-white hover:bg-amber-700 ring-2 ring-amber-500/40 shadow-sm'
+                      : 'bg-white text-slate-700 border border-slate-300 hover:border-amber-500 hover:bg-amber-50/50'
+                  }`}
+                  title={`Apply ${preset.blockName || bId} targets (Sum: ${Number(preset.totalTarget || 0).toLocaleString('en-IN')})`}
+                >
+                  <Target className={`w-3.5 h-3.5 ${isSelected ? 'text-amber-200' : 'text-amber-600'}`} />
+                  <span>{preset.blockName || bId}</span>
+                  <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${isSelected ? 'bg-amber-700 text-amber-100' : 'bg-slate-100 text-slate-600'}`}>
+                    {Number(preset.totalTarget || 0).toLocaleString('en-IN')}
+                  </span>
+                </button>
+              );
+            })}
+
+            <button
+              type="button"
+              onClick={onOpenTargetModal}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-emerald-600 text-emerald-800 hover:bg-emerald-50 rounded-lg text-xs font-bold transition shadow-2xs cursor-pointer"
+              title="Open Manager to edit targets, add panchayats, or paste from Excel"
+            >
+              <SlidersHorizontal className="w-3.5 h-3.5 text-emerald-700" />
+              <span>Manage Saved Targets</span>
+            </button>
           </div>
         </div>
       )}

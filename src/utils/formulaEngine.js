@@ -64,8 +64,8 @@ export function evaluateFormula(formulaStr, contextRow) {
     const ifMatch = expr.match(ifRegex);
     if (ifMatch) {
       const condExpr = ifMatch[1].trim();
-      const trueVal = ifMatch[2].trim().replace(/^["']|["']$/g, '');
-      const falseVal = ifMatch[3].trim().replace(/^["']|["']$/g, '');
+      const trueVal = ifMatch[2].trim();
+      const falseVal = ifMatch[3].trim();
 
       const condEvaluated = evaluateCondition(condExpr, contextRow);
       const chosenExpr = condEvaluated ? trueVal : falseVal;
@@ -436,10 +436,10 @@ export function generateReportData(
   const gapTotal = totals['Gap'];
 
   if (targetTotal && Number(targetTotal) > 0) {
-    if (totalEntryTotal !== undefined) {
+    if (totalEntryTotal !== undefined && totalEntryTotal !== null) {
       totals['% Entry'] = (Number(totalEntryTotal) / Number(targetTotal)) * 100;
     }
-    if (gapTotal !== undefined) {
+    if (gapTotal !== undefined && gapTotal !== null) {
       totals['% Gap'] = (Number(gapTotal) / Number(targetTotal)) * 100;
     }
   }

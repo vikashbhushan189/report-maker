@@ -10,6 +10,12 @@ import { parseExcelFile, parseRawText, extractSheetData, analyzeColumns } from '
 import { REPORT_TOPICS, REPORT_THEMES, detectT01Months, detectVoMonths, detectVoIndividualMonths, generateT01Columns, generateVoColumns, generateVoIndividualColumns, generateLakhpatiColumns, generateVprpColumns, generateP01Columns, generateEkycColumns, getPreviousDate } from './utils/reportTemplates';
 import { generateReportData } from './utils/formulaEngine';
 import { exportToStyledExcel, exportToCSV } from './utils/excelExporter';
+import {
+  getSavedBlockTargets,
+  applyTargetPresetToManualValues,
+  matchBlockPreset
+} from './utils/targetPresets';
+import TargetPresetModal from './components/TargetPresetModal';
 import { CheckCircle2, AlertCircle } from 'lucide-react';
 
 export default function App() {
@@ -40,6 +46,9 @@ export default function App() {
   const [selectedMonths, setSelectedMonths] = useState(['September 2026', 'August 2026']);
   const [isExporting, setIsExporting] = useState(false);
   const [toast, setToast] = useState(null);
+  const [savedBlockTargets, setSavedBlockTargets] = useState(() => getSavedBlockTargets());
+  const [selectedTargetBlockId, setSelectedTargetBlockId] = useState('KOTWA');
+  const [showTargetModal, setShowTargetModal] = useState(false);
 
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
@@ -177,6 +186,11 @@ export default function App() {
       }
     } else if (isLakhpati) {
       setColumns(generateLakhpatiColumns());
+      const preset = savedBlockTargets[selectedTargetBlockId] || savedBlockTargets['KOTWA'];
+      if (preset) {
+        const currentGps = fileInfo?.data?.map(r => r['Gram Panchayat'] || r.GramPanchayat).filter(Boolean) || [];
+        setManualValues(prev => applyTargetPresetToManualValues(preset, prev, currentGps));
+      }
       if (!currentHeaders.some(h => h.includes('Potential Lakhpati Didi') || h.includes('Active Approved Potential Didis'))) {
         loadDataset('lakhpati_didi');
         return;
@@ -247,7 +261,21 @@ export default function App() {
     const stats = analyzeColumns(rawHeaders, sample.data);
     const defaultTopic = REPORT_TOPICS.find(t => t.id === sample.defaultPreset) || REPORT_TOPICS[0];
 
-    if (key === 't01_vo_individual') {
+    if (key === 'lakhpati_didi_chakia') {
+      setSelectedTargetBlockId('CHAKIA-PIPRA');
+      const preset = savedBlockTargets['CHAKIA-PIPRA'];
+      if (preset) {
+        const gps = sample.data.map(r => r['Gram Panchayat']).filter(Boolean);
+        setManualValues(prev => applyTargetPresetToManualValues(preset, prev, gps));
+      }
+    } else if (key === 'lakhpati_didi') {
+      setSelectedTargetBlockId('KOTWA');
+      const preset = savedBlockTargets['KOTWA'];
+      if (preset) {
+        const gps = sample.data.map(r => r['Gram Panchayat']).filter(Boolean);
+        setManualValues(prev => applyTargetPresetToManualValues(preset, prev, gps));
+      }
+    } else if (key === 't01_vo_individual') {
       const voIndMonths = detectVoIndividualMonths(rawHeaders);
       const allM = voIndMonths.length > 0 ? voIndMonths : ['March 2026', 'February 2026', 'January 2026'];
       setAvailableMonths(allM);
@@ -361,13 +389,25 @@ export default function App() {
       const detectedDate = parsed.metadata?.detectedDate || '21-10-2026';
 
       setSelectedTopicId('lakhpati_didi');
+      const detectedBlock = parsed.metadata?.block || (parsed.data && parsed.data[0]?.Block) || '';
+      const matchedPresetKey = matchBlockPreset(detectedBlock);
+      const presetKeyToUse = matchedPresetKey || selectedTargetBlockId || 'KOTWA';
+      const effectiveBlockName = (savedBlockTargets[presetKeyToUse]?.blockName) || parsed.metadata?.block || 'KOTWA';
+
+      if (savedBlockTargets[presetKeyToUse]) {
+        setSelectedTargetBlockId(presetKeyToUse);
+        const preset = savedBlockTargets[presetKeyToUse];
+        const uploadedGps = parsed.data.map(r => r['Gram Panchayat'] || r.GramPanchayat).filter(Boolean);
+        setManualValues(prev => applyTargetPresetToManualValues(preset, prev, uploadedGps));
+      }
+
       setReportMeta(prev => ({
         ...prev,
         presetId: 'lakhpati_didi',
         title: 'Lakhpati Didi Entry Status Report - (Q2 : Jul-sep), 2026-27',
         subtitle: 'Lakhpati Didi Entry Status Report - (Q2 : Jul-sep), 2026-27',
         district: (parsed.metadata?.district || 'PURBI CHAMPARAN').replace(/^District:\s*/i, '').replace(/\s+(?:Block|Panchayat|Date|Period|State):.*$/i, '').trim() || 'PURBI CHAMPARAN',
-        companyName: `Block: ${(parsed.metadata?.block || 'KOTWA').replace(/^Block:\s*/i, '').replace(/\s+(?:District|Panchayat|Date|Period|State):.*$/i, '').trim() || 'KOTWA'}`,
+        companyName: `Block: ${effectiveBlockName || (parsed.metadata?.block || 'KOTWA').replace(/^Block:\s*/i, '').replace(/\s+(?:District|Panchayat|Date|Period|State):.*$/i, '').trim() || 'KOTWA'}`,
         panchayat: 'All Panchayats',
         dateLabel: `Date:-${detectedDate}`,
         currentDate: detectedDate,
@@ -525,12 +565,74 @@ export default function App() {
   };
 
   const [manualValues, setManualValues] = useState(() => {
+    let base = { ...INITIAL_PREV_EKYC };
     try {
       const saved = localStorage.getItem('manual_ekyc_prev_data');
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        base = { ...base, ...JSON.parse(saved) };
+      }
     } catch (e) {}
-    return INITIAL_PREV_EKYC;
+
+    // Initialize with default Kotwa targets
+    const allPresets = getSavedBlockTargets();
+    if (allPresets['KOTWA']) {
+      base = applyTargetPresetToManualValues(allPresets['KOTWA'], base);
+    }
+    return base;
   });
+
+  // Handle selecting a saved block target preset (e.g. KOTWA or CHAKIA-PIPRA)
+  const handleSelectTargetBlock = (blockId) => {
+    setSelectedTargetBlockId(blockId);
+    const preset = savedBlockTargets[blockId];
+    if (!preset) return;
+
+    const currentGps = reportRows?.map(r => r['Gram Panchayat'] || r.GramPanchayat).filter(Boolean) ||
+      fileInfo?.data?.map(r => r['Gram Panchayat'] || r.GramPanchayat).filter(Boolean) || [];
+
+    setManualValues(prev => {
+      const updated = applyTargetPresetToManualValues(preset, prev, currentGps);
+      try {
+        localStorage.setItem('manual_ekyc_prev_data', JSON.stringify(updated));
+      } catch (e) {}
+      return updated;
+    });
+
+    setReportMeta(prev => ({
+      ...prev,
+      companyName: `Block: ${preset.blockName || blockId}`,
+      district: preset.district || prev.district || 'PURBI CHAMPARAN'
+    }));
+
+    showToast(`Applied "${preset.blockName || blockId}" targets (Total: ${Number(preset.totalTarget || 0).toLocaleString('en-IN')})`);
+  };
+
+  // Handle applying target preset from TargetPresetModal
+  const handleApplyTargetPreset = (presetData) => {
+    if (!presetData || !presetData.blockId) return;
+    const allUpdated = getSavedBlockTargets();
+    setSavedBlockTargets(allUpdated);
+    setSelectedTargetBlockId(presetData.blockId);
+
+    const currentGps = reportRows?.map(r => r['Gram Panchayat'] || r.GramPanchayat).filter(Boolean) ||
+      fileInfo?.data?.map(r => r['Gram Panchayat'] || r.GramPanchayat).filter(Boolean) || [];
+
+    setManualValues(prev => {
+      const updated = applyTargetPresetToManualValues(presetData, prev, currentGps);
+      try {
+        localStorage.setItem('manual_ekyc_prev_data', JSON.stringify(updated));
+      } catch (e) {}
+      return updated;
+    });
+
+    setReportMeta(prev => ({
+      ...prev,
+      companyName: `Block: ${presetData.blockName || presetData.blockId}`,
+      district: presetData.district || prev.district || 'PURBI CHAMPARAN'
+    }));
+
+    showToast(`Saved and applied "${presetData.blockName}" target preset!`);
+  };
 
   const handleSaveManualValues = (newValues) => {
     setManualValues(newValues);
@@ -652,6 +754,10 @@ export default function App() {
           availableMonths={availableMonths}
           selectedMonths={selectedMonths}
           onToggleMonth={handleToggleMonth}
+          selectedTargetBlockId={selectedTargetBlockId}
+          onSelectTargetBlock={handleSelectTargetBlock}
+          savedBlockTargets={savedBlockTargets}
+          onOpenTargetModal={() => setShowTargetModal(true)}
         />
 
         {/* Display Views */}
@@ -669,6 +775,10 @@ export default function App() {
                 manualValues={manualValues}
                 onSaveManualValues={handleSaveManualValues}
                 onUpdateSingleManualValue={handleUpdateSingleManualValue}
+                selectedTargetBlockId={selectedTargetBlockId}
+                onSelectTargetBlock={handleSelectTargetBlock}
+                savedBlockTargets={savedBlockTargets}
+                onOpenTargetModal={() => setShowTargetModal(true)}
               />
             )}
 
@@ -711,6 +821,10 @@ export default function App() {
                 manualValues={manualValues}
                 onSaveManualValues={handleSaveManualValues}
                 onUpdateSingleManualValue={handleUpdateSingleManualValue}
+                selectedTargetBlockId={selectedTargetBlockId}
+                onSelectTargetBlock={handleSelectTargetBlock}
+                savedBlockTargets={savedBlockTargets}
+                onOpenTargetModal={() => setShowTargetModal(true)}
               />
             )}
 
@@ -727,6 +841,19 @@ export default function App() {
           </div>
         )}
       </main>
+
+      {/* Lakhpati Target Presets Modal */}
+      <TargetPresetModal
+        isOpen={showTargetModal}
+        onClose={() => setShowTargetModal(false)}
+        currentBlockId={selectedTargetBlockId}
+        onApplyTargets={handleApplyTargetPreset}
+        currentPanchayats={
+          reportRows?.map(r => r['Gram Panchayat'] || r.GramPanchayat).filter(Boolean) ||
+          fileInfo?.data?.map(r => r['Gram Panchayat'] || r.GramPanchayat).filter(Boolean) ||
+          []
+        }
+      />
 
       {/* Footer */}
       <footer className="bg-white border-t border-slate-200 py-3 mt-auto">

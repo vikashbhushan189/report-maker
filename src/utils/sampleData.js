@@ -938,6 +938,49 @@ export const SAMPLE_DATASETS = {
     ]
   },
 
+  lakhpati_didi_chakia: {
+    name: 'Lakhpati Didi Entry Status Report - Chakia-Pipra (18 Panchayats)',
+    description: 'Chakia-Pipra Block: 18 Gram Panchayats with Active Potential Didis, Targets (Sum: 9,340), Total Entry, and Yesterday Progress.',
+    filename: 'A02_Digital_Aajeevika_Register_Report_Chakia_Pipra.xlsx',
+    defaultPreset: 'lakhpati_didi',
+    meta: {
+      block: 'CHAKIA-PIPRA',
+      district: 'PURBI CHAMPARAN',
+      state: 'BIHAR',
+      date: '15-10-2026'
+    },
+    portalTotals: {
+      excelRow: 4,
+      'Gram Panchayat': 'Total',
+      'Active Approved Potential Lakhpati Didi': 14944,
+      'Active Approved Potential Didis': 14944,
+      'Target': 9340,
+      'Aajeevika Register for Potential Lakhpati Didi PLD Entered': 428,
+      'Total Entry': 428,
+      'Yesterday Progress': 180
+    },
+    data: [
+      { _excelRowNumber: 5, _sno: 1, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'CHAKIA-PIPRA', 'Gram Panchayat': 'HARPUR', 'Active Approved Potential Lakhpati Didi': 1664, 'Active Approved Potential Didis': 1664, 'Target': 1040, 'Aajeevika Register for Potential Lakhpati Didi PLD Entered': 35, 'Total Entry': 35, 'Yesterday Progress': 12 },
+      { _excelRowNumber: 6, _sno: 2, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'CHAKIA-PIPRA', 'Gram Panchayat': 'KUARPAR', 'Active Approved Potential Lakhpati Didi': 1568, 'Active Approved Potential Didis': 1568, 'Target': 980, 'Aajeevika Register for Potential Lakhpati Didi PLD Entered': 28, 'Total Entry': 28, 'Yesterday Progress': 10 },
+      { _excelRowNumber: 7, _sno: 3, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'CHAKIA-PIPRA', 'Gram Panchayat': 'RAMGARH MAHUWA', 'Active Approved Potential Lakhpati Didi': 1158, 'Active Approved Potential Didis': 1158, 'Target': 724, 'Aajeevika Register for Potential Lakhpati Didi PLD Entered': 19, 'Total Entry': 19, 'Yesterday Progress': 8 },
+      { _excelRowNumber: 8, _sno: 4, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'CHAKIA-PIPRA', 'Gram Panchayat': 'JAMUNIA', 'Active Approved Potential Lakhpati Didi': 1139, 'Active Approved Potential Didis': 1139, 'Target': 712, 'Aajeevika Register for Potential Lakhpati Didi PLD Entered': 22, 'Total Entry': 22, 'Yesterday Progress': 14 },
+      { _excelRowNumber: 9, _sno: 5, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'CHAKIA-PIPRA', 'Gram Panchayat': 'CHINTAMANPUR', 'Active Approved Potential Lakhpati Didi': 1050, 'Active Approved Potential Didis': 1050, 'Target': 656, 'Aajeevika Register for Potential Lakhpati Didi PLD Entered': 15, 'Total Entry': 15, 'Yesterday Progress': 6 },
+      { _excelRowNumber: 10, _sno: 6, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'CHAKIA-PIPRA', 'Gram Panchayat': 'BHIRKHIA', 'Active Approved Potential Lakhpati Didi': 1030, 'Active Approved Potential Didis': 1030, 'Target': 644, 'Aajeevika Register for Potential Lakhpati Didi PLD Entered': 42, 'Total Entry': 42, 'Yesterday Progress': 20 },
+      { _excelRowNumber: 11, _sno: 7, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'CHAKIA-PIPRA', 'Gram Panchayat': 'MADHUBAN BEDIBAN', 'Active Approved Potential Lakhpati Didi': 997, 'Active Approved Potential Didis': 997, 'Target': 623, 'Aajeevika Register for Potential Lakhpati Didi PLD Entered': 18, 'Total Entry': 18, 'Yesterday Progress': 9 },
+      { _excelRowNumber: 12, _sno: 8, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'CHAKIA-PIPRA', 'Gram Panchayat': 'HARDIYABAD', 'Active Approved Potential Lakhpati Didi': 872, 'Active Approved Potential Didis': 872, 'Target': 545, 'Aajeevika Register for Potential Lakhpati Didi PLD Entered': 12, 'Total Entry': 12, 'Yesterday Progress': 5 },
+      { _excelRowNumber: 13, _sno: 9, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'CHAKIA-PIPRA', 'Gram Panchayat': 'SAGAR', 'Active Approved Potential Lakhpati Didi': 864, 'Active Approved Potential Didis': 864, 'Target': 540, 'Aajeevika Register for Potential Lakhpati Didi PLD Entered': 31, 'Total Entry': 31, 'Yesterday Progress': 15 },
+      { _excelRowNumber: 14, _sno: 10, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'CHAKIA-PIPRA', 'Gram Panchayat': 'MADHURAPUR', 'Active Approved Potential Lakhpati Didi': 808, 'Active Approved Potential Didis': 808, 'Target': 505, 'Aajeevika Register for Potential Lakhpati Didi PLD Entered': 20, 'Total Entry': 20, 'Yesterday Progress': 11 },
+      { _excelRowNumber: 15, _sno: 11, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'CHAKIA-PIPRA', 'Gram Panchayat': 'BISHUNPURA', 'Active Approved Potential Lakhpati Didi': 717, 'Active Approved Potential Didis': 717, 'Target': 448, 'Aajeevika Register for Potential Lakhpati Didi PLD Entered': 14, 'Total Entry': 14, 'Yesterday Progress': 4 },
+      { _excelRowNumber: 16, _sno: 12, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'CHAKIA-PIPRA', 'Gram Panchayat': 'KUNRIA', 'Active Approved Potential Lakhpati Didi': 696, 'Active Approved Potential Didis': 696, 'Target': 435, 'Aajeevika Register for Potential Lakhpati Didi PLD Entered': 26, 'Total Entry': 26, 'Yesterday Progress': 12 },
+      { _excelRowNumber: 17, _sno: 13, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'CHAKIA-PIPRA', 'Gram Panchayat': 'MAHUAWA', 'Active Approved Potential Lakhpati Didi': 650, 'Active Approved Potential Didis': 650, 'Target': 406, 'Aajeevika Register for Potential Lakhpati Didi PLD Entered': 16, 'Total Entry': 16, 'Yesterday Progress': 8 },
+      { _excelRowNumber: 18, _sno: 14, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'CHAKIA-PIPRA', 'Gram Panchayat': 'CHAKWARA', 'Active Approved Potential Lakhpati Didi': 627, 'Active Approved Potential Didis': 627, 'Target': 392, 'Aajeevika Register for Potential Lakhpati Didi PLD Entered': 38, 'Total Entry': 38, 'Yesterday Progress': 17 },
+      { _excelRowNumber: 19, _sno: 15, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'CHAKIA-PIPRA', 'Gram Panchayat': 'BAISAHA', 'Active Approved Potential Lakhpati Didi': 560, 'Active Approved Potential Didis': 560, 'Target': 350, 'Aajeevika Register for Potential Lakhpati Didi PLD Entered': 55, 'Total Entry': 55, 'Yesterday Progress': 23 },
+      { _excelRowNumber: 20, _sno: 16, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'CHAKIA-PIPRA', 'Gram Panchayat': 'BARAMADIA', 'Active Approved Potential Lakhpati Didi': 496, 'Active Approved Potential Didis': 496, 'Target': 310, 'Aajeevika Register for Potential Lakhpati Didi PLD Entered': 29, 'Total Entry': 29, 'Yesterday Progress': 11 },
+      { _excelRowNumber: 21, _sno: 17, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'CHAKIA-PIPRA', 'Gram Panchayat': 'CHAKIA', 'Active Approved Potential Lakhpati Didi': 32, 'Active Approved Potential Didis': 32, 'Target': 20, 'Aajeevika Register for Potential Lakhpati Didi PLD Entered': 5, 'Total Entry': 5, 'Yesterday Progress': 3 },
+      { _excelRowNumber: 22, _sno: 18, State: 'BIHAR', District: 'PURBI CHAMPARAN', Block: 'CHAKIA-PIPRA', 'Gram Panchayat': 'KUNAWA', 'Active Approved Potential Lakhpati Didi': 16, 'Active Approved Potential Didis': 16, 'Target': 10, 'Aajeevika Register for Potential Lakhpati Didi PLD Entered': 3, 'Total Entry': 3, 'Yesterday Progress': 2 }
+    ]
+  },
+
   p01_shg_households: {
     name: 'P01 - SMC - SHGs and Households (16 Panchayats)',
     description: 'Kotwa Block: 16 Gram Panchayats with SHGs & HHs till March-23, April-2023 to October-2026, Daily progress on 13-10-2026, and Cumulative totals.',

@@ -14,7 +14,8 @@ import {
   RefreshCw,
   CheckCircle2,
   Edit3,
-  ArrowUpDown
+  ArrowUpDown,
+  Target
 } from 'lucide-react';
 import { formatValue, getT01PctColor, getVoPctColor, getVoYesNoColor, getLakhpatiProgressColor, getLakhpatiGapCircleColor, getP01HhsHeatmapColor, getP01ShgArrow } from '../utils/formulaEngine';
 import { REPORT_THEMES } from '../utils/reportTemplates';
@@ -30,7 +31,11 @@ export default function ReportViewer({
   isExporting,
   manualValues = {},
   onSaveManualValues,
-  onUpdateSingleManualValue
+  onUpdateSingleManualValue,
+  selectedTargetBlockId = 'KOTWA',
+  onSelectTargetBlock,
+  savedBlockTargets = {},
+  onOpenTargetModal
 }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -233,6 +238,36 @@ export default function ReportViewer({
               <Edit3 className="w-3.5 h-3.5 text-amber-700" />
               <span>Fill Previous Day e-KYC ({reportMeta.dayBeforeYesterdayDate || reportMeta.prevDate || '10-10-2026'})</span>
             </button>
+          )}
+
+          {/* Lakhpati Target Preset Selector */}
+          {isLakhpati && savedBlockTargets && Object.keys(savedBlockTargets).length > 0 && (
+            <div className="flex items-center gap-1.5 bg-amber-50/90 border border-amber-300 rounded-lg px-2 py-1 shadow-2xs">
+              <Target className="w-3.5 h-3.5 text-amber-700 shrink-0" />
+              <span className="text-[11px] font-bold text-amber-900 hidden sm:inline">
+                Target Block:
+              </span>
+              <select
+                value={selectedTargetBlockId || 'KOTWA'}
+                onChange={(e) => onSelectTargetBlock && onSelectTargetBlock(e.target.value)}
+                className="bg-white border border-amber-300 rounded px-2 py-0.5 text-xs font-bold text-slate-800 focus:outline-hidden cursor-pointer"
+              >
+                {Object.entries(savedBlockTargets).map(([bId, preset]) => (
+                  <option key={bId} value={bId}>
+                    {preset.blockName || bId} ({Number(preset.totalTarget || 0).toLocaleString('en-IN')})
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={onOpenTargetModal}
+                className="p-1 hover:bg-amber-200/60 text-amber-900 rounded transition cursor-pointer flex items-center gap-1 text-[11px] font-bold"
+                title="Manage & edit target presets"
+              >
+                <Edit3 className="w-3 h-3 text-amber-700" />
+                <span className="hidden md:inline">Edit Targets</span>
+              </button>
+            </div>
           )}
         </div>
 
@@ -453,9 +488,16 @@ export default function ReportViewer({
                           )}
                           {isManual && (
                             <button
-                              onClick={(e) => { e.stopPropagation(); setShowManualModal(true); }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (isLakhpati && (col.id === 'col_target' || col.header === 'Target') && onOpenTargetModal) {
+                                  onOpenTargetModal();
+                                } else {
+                                  setShowManualModal(true);
+                                }
+                              }}
                               className="text-amber-800 hover:text-amber-950 p-0.5 rounded hover:bg-amber-200/50"
-                              title="Click to edit / paste previous day numbers"
+                              title={isLakhpati && (col.id === 'col_target' || col.header === 'Target') ? "Click to manage saved block targets" : "Click to edit / paste previous day numbers"}
                             >
                               <Edit3 className="w-3 h-3" />
                             </button>
