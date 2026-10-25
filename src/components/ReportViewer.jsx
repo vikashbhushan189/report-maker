@@ -44,7 +44,7 @@ export default function ReportViewer({
 
   const theme = REPORT_THEMES[reportMeta.theme] || REPORT_THEMES.ekyc_olive;
   const isP01 = reportMeta.presetId === 'p01_shg_households' || reportMeta.layoutType === 'p01_grid';
-  const isLakhpati = !isP01 && (reportMeta.presetId === 'lakhpati_didi' || reportMeta.layoutType === 'lakhpati_grid');
+  const isLakhpati = !isP01 && (reportMeta.presetId === 'lakhpati_didi' || reportMeta.presetId === 'lakhpati_didi_chakia' || reportMeta.layoutType === 'lakhpati_grid');
   const isVprp = !isP01 && !isLakhpati && (reportMeta.presetId === 'vprp_entry' || reportMeta.layoutType === 'vprp_grid');
   const isVoIndividual = !isP01 && !isLakhpati && !isVprp && (reportMeta.presetId === 't01_vo_individual' || reportMeta.layoutType === 't01_vo_individual_grid');
   const isVo = !isP01 && !isLakhpati && !isVprp && !isVoIndividual && (reportMeta.presetId === 't01_vo_transactions' || reportMeta.layoutType === 't01_vo_grid');

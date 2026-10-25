@@ -130,7 +130,7 @@ export default function App() {
     setSelectedTopicId(topic.id);
 
     const isP01 = topic.id === 'p01_shg_households';
-    const isLakhpati = topic.id === 'lakhpati_didi';
+    const isLakhpati = topic.id === 'lakhpati_didi' || topic.id === 'lakhpati_didi_chakia';
     const isVprp = topic.id === 'vprp_entry';
     const isVoIndividual = topic.id === 't01_vo_individual';
     const isVo = topic.id === 't01_vo_transactions';
@@ -186,14 +186,26 @@ export default function App() {
       }
     } else if (isLakhpati) {
       setColumns(generateLakhpatiColumns());
-      const preset = savedBlockTargets[selectedTargetBlockId] || savedBlockTargets['KOTWA'];
+      const blockKey = topic.id === 'lakhpati_didi_chakia' ? 'CHAKIA-PIPRA' : 'KOTWA';
+      setSelectedTargetBlockId(blockKey);
+      const preset = savedBlockTargets[blockKey] || savedBlockTargets['KOTWA'];
       if (preset) {
         const currentGps = fileInfo?.data?.map(r => r['Gram Panchayat'] || r.GramPanchayat).filter(Boolean) || [];
         setManualValues(prev => applyTargetPresetToManualValues(preset, prev, currentGps));
       }
-      if (!currentHeaders.some(h => h.includes('Potential Lakhpati Didi') || h.includes('Active Approved Potential Didis'))) {
-        loadDataset('lakhpati_didi');
-        return;
+
+      if (topic.id === 'lakhpati_didi_chakia') {
+        const isChakia = fileInfo?.data?.some(r => r.Block === 'CHAKIA-PIPRA' || r['Gram Panchayat'] === 'BARAMADIA');
+        if (!isChakia) {
+          loadDataset('lakhpati_didi_chakia');
+          return;
+        }
+      } else {
+        const isKotwa = fileInfo?.data?.some(r => r.Block === 'KOTWA' || r['Gram Panchayat'] === 'POKHARA');
+        if (!isKotwa) {
+          loadDataset('lakhpati_didi');
+          return;
+        }
       }
     } else if (isVprp) {
       setColumns(generateVprpColumns());
@@ -386,13 +398,14 @@ export default function App() {
 
       setColumns(generateP01Columns(pDate, pPeriod));
     } else if (isLakhpatiData) {
-      const detectedDate = parsed.metadata?.detectedDate || '21-10-2026';
-
-      setSelectedTopicId('lakhpati_didi');
+      const detectedDate = parsed.metadata?.detectedDate || '24-10-2026';
       const detectedBlock = parsed.metadata?.block || (parsed.data && parsed.data[0]?.Block) || '';
       const matchedPresetKey = matchBlockPreset(detectedBlock);
       const presetKeyToUse = matchedPresetKey || selectedTargetBlockId || 'KOTWA';
       const effectiveBlockName = (savedBlockTargets[presetKeyToUse]?.blockName) || parsed.metadata?.block || 'KOTWA';
+      const topicIdToSet = presetKeyToUse === 'CHAKIA-PIPRA' ? 'lakhpati_didi_chakia' : 'lakhpati_didi';
+
+      setSelectedTopicId(topicIdToSet);
 
       if (savedBlockTargets[presetKeyToUse]) {
         setSelectedTargetBlockId(presetKeyToUse);
@@ -403,11 +416,12 @@ export default function App() {
 
       setReportMeta(prev => ({
         ...prev,
-        presetId: 'lakhpati_didi',
+        presetId: topicIdToSet,
         title: 'Lakhpati Didi Entry Status Report - (Q2 : Jul-sep), 2026-27',
         subtitle: 'Lakhpati Didi Entry Status Report - (Q2 : Jul-sep), 2026-27',
         district: (parsed.metadata?.district || 'PURBI CHAMPARAN').replace(/^District:\s*/i, '').replace(/\s+(?:Block|Panchayat|Date|Period|State):.*$/i, '').trim() || 'PURBI CHAMPARAN',
         companyName: `Block: ${effectiveBlockName || (parsed.metadata?.block || 'KOTWA').replace(/^Block:\s*/i, '').replace(/\s+(?:District|Panchayat|Date|Period|State):.*$/i, '').trim() || 'KOTWA'}`,
+        block: effectiveBlockName,
         panchayat: 'All Panchayats',
         dateLabel: `Date:-${detectedDate}`,
         currentDate: detectedDate,
@@ -591,6 +605,22 @@ export default function App() {
     const preset = savedBlockTargets[blockId];
     if (!preset) return;
 
+    if (blockId === 'CHAKIA-PIPRA') {
+      setSelectedTopicId('lakhpati_didi_chakia');
+      const isChakia = fileInfo?.data?.some(r => r.Block === 'CHAKIA-PIPRA' || r['Gram Panchayat'] === 'BARAMADIA');
+      if (!isChakia) {
+        loadDataset('lakhpati_didi_chakia');
+        return;
+      }
+    } else if (blockId === 'KOTWA') {
+      setSelectedTopicId('lakhpati_didi');
+      const isKotwa = fileInfo?.data?.some(r => r.Block === 'KOTWA' || r['Gram Panchayat'] === 'POKHARA');
+      if (!isKotwa && (selectedTopicId === 'lakhpati_didi' || selectedTopicId === 'lakhpati_didi_chakia')) {
+        loadDataset('lakhpati_didi');
+        return;
+      }
+    }
+
     const currentGps = reportRows?.map(r => r['Gram Panchayat'] || r.GramPanchayat).filter(Boolean) ||
       fileInfo?.data?.map(r => r['Gram Panchayat'] || r.GramPanchayat).filter(Boolean) || [];
 
@@ -605,10 +635,11 @@ export default function App() {
     setReportMeta(prev => ({
       ...prev,
       companyName: `Block: ${preset.blockName || blockId}`,
+      block: preset.blockName || blockId,
       district: preset.district || prev.district || 'PURBI CHAMPARAN'
     }));
 
-    showToast(`Applied "${preset.blockName || blockId}" targets (Total: ${Number(preset.totalTarget || 0).toLocaleString('en-IN')})`);
+    showToast(`Applied "${preset.blockName || blockId}" template & targets (Total: ${Number(preset.totalTarget || 0).toLocaleString('en-IN')})`);
   };
 
   // Handle applying target preset from TargetPresetModal

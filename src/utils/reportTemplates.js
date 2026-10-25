@@ -818,7 +818,7 @@ export const REPORT_TOPICS = [
   },
   {
     id: 'lakhpati_didi',
-    topicName: 'Lakhpati Didi Entry Status Report - (Q2 : Jul-sep), 2026-27',
+    topicName: 'Lakhpati Didi Entry Status Report - Kotwa (16 Panchayats)',
     badge: 'Official Lakhpati Didi Format',
     isPrimary: false,
     title: 'Lakhpati Didi Entry Status Report - (Q2 : Jul-sep), 2026-27',
@@ -833,6 +833,25 @@ export const REPORT_TOPICS = [
     sortByCol: 'Gap',
     sortDir: 'desc',
     description: 'Official Lakhpati Didi Entry Status format matching A05 raw portal export: uses Total (Unique count) as Total Entry, ranks by Gap descending with green entry data bars, red gap bars, and traffic light indicator circles.',
+    columns: generateLakhpatiColumns()
+  },
+  {
+    id: 'lakhpati_didi_chakia',
+    topicName: 'Lakhpati Didi Entry Status Report - Chakia-Pipra (18 Panchayats)',
+    badge: 'Official Chakia-Pipra Format',
+    isPrimary: false,
+    title: 'Lakhpati Didi Entry Status Report - (Q2 : Jul-sep), 2026-27',
+    subtitle: 'Lakhpati Didi Entry Status Report - (Q2 : Jul-sep), 2026-27',
+    companyName: 'Block: CHAKIA-PIPRA',
+    district: 'PURBI CHAMPARAN',
+    block: 'CHAKIA-PIPRA',
+    dateLabel: 'Date:-24-10-2026',
+    currentDate: '24-10-2026',
+    theme: 'lakhpati_yellow',
+    layoutType: 'lakhpati_grid',
+    sortByCol: 'Gap',
+    sortDir: 'desc',
+    description: 'Official Lakhpati Didi Entry Status format for Chakia-Pipra Block: 18 Panchayats (Target: 9,340), ranks by Gap descending with green entry data bars, red gap bars, and traffic light indicator circles.',
     columns: generateLakhpatiColumns()
   },
   {

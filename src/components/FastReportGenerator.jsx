@@ -43,6 +43,7 @@ export default function FastReportGenerator({
   const [showPasteModal, setShowPasteModal] = useState(false);
   const [pasteText, setPasteText] = useState('');
 
+  const isLakhpatiTopic = selectedTopicId === 'lakhpati_didi' || selectedTopicId === 'lakhpati_didi_chakia';
   const currentTopic = REPORT_TOPICS.find(t => t.id === selectedTopicId) || REPORT_TOPICS[0];
 
   const handleFileChange = (e) => {
@@ -167,7 +168,7 @@ export default function FastReportGenerator({
           </div>
 
           <div className="text-[10px] text-slate-500 mt-1 truncate">
-            Current: <span className="font-semibold text-slate-700">{fileName || (selectedTopicId === 'lakhpati_didi' ? 'A05_Aajeevika_Livelihood_Income_Report_Kotwa.xlsx' : selectedTopicId === 't01_vo_individual' ? 'T01_VO_Transactions_Individual_Kotwa.xlsx' : selectedTopicId === 't01_vo_transactions' ? 'T01_VO_Transactions_Kotwa.xlsx' : selectedTopicId === 't01_transactions' ? 'T01_SHG_Transactions_Kotwa.xlsx' : 'S01_Member_KYC_Details_Kotwa.xlsx')}</span>
+            Current: <span className="font-semibold text-slate-700">{fileName || (selectedTopicId === 'lakhpati_didi_chakia' ? 'A05_Aajeevika_Livelihood_Income_Report_Chakia_Pipra.xlsx' : isLakhpatiTopic ? 'A05_Aajeevika_Livelihood_Income_Report_Kotwa.xlsx' : selectedTopicId === 't01_vo_individual' ? 'T01_VO_Transactions_Individual_Kotwa.xlsx' : selectedTopicId === 't01_vo_transactions' ? 'T01_VO_Transactions_Kotwa.xlsx' : selectedTopicId === 't01_transactions' ? 'T01_SHG_Transactions_Kotwa.xlsx' : 'S01_Member_KYC_Details_Kotwa.xlsx')}</span>
           </div>
         </div>
 
@@ -176,11 +177,11 @@ export default function FastReportGenerator({
           <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1 flex items-center justify-between">
             <span className="flex items-center gap-1.5 text-emerald-800">
               <span className="w-4 h-4 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px] font-bold">3</span>
-              {selectedTopicId === 'lakhpati_didi' || selectedTopicId === 't01_transactions' || selectedTopicId === 't01_vo_transactions' || selectedTopicId === 't01_vo_individual' ? 'Header & Date:' : 'Report Dates & Block:'}
+              {isLakhpatiTopic || selectedTopicId === 't01_transactions' || selectedTopicId === 't01_vo_transactions' || selectedTopicId === 't01_vo_individual' ? 'Header & Date:' : 'Report Dates & Block:'}
             </span>
           </label>
 
-          {selectedTopicId === 'lakhpati_didi' || selectedTopicId === 't01_vo_transactions' || selectedTopicId === 't01_vo_individual' ? (
+          {isLakhpatiTopic || selectedTopicId === 't01_vo_transactions' || selectedTopicId === 't01_vo_individual' ? (
             <div className="grid grid-cols-3 gap-1.5">
               <div>
                 <span className="text-[9px] text-slate-400 block truncate">District</span>
@@ -195,8 +196,8 @@ export default function FastReportGenerator({
                 <span className="text-[9px] text-slate-400 block truncate">Block</span>
                 <input
                   type="text"
-                  value={reportMeta.companyName?.replace(/^Block:\s*/i, '') || 'KOTWA'}
-                  onChange={(e) => setReportMeta({ ...reportMeta, companyName: `Block: ${e.target.value}` })}
+                  value={reportMeta.companyName?.replace(/^Block:\s*/i, '') || reportMeta.block || (selectedTopicId === 'lakhpati_didi_chakia' ? 'CHAKIA-PIPRA' : 'KOTWA')}
+                  onChange={(e) => setReportMeta({ ...reportMeta, companyName: `Block: ${e.target.value}`, block: e.target.value })}
                   className="w-full bg-white border border-slate-300 rounded px-1.5 py-1 text-[11px] font-bold text-slate-800 focus:outline-hidden"
                 />
               </div>
@@ -204,7 +205,7 @@ export default function FastReportGenerator({
                 <span className="text-[9px] text-slate-400 block truncate">Date</span>
                 <input
                   type="text"
-                  value={reportMeta.currentDate || (selectedTopicId === 'lakhpati_didi' ? '21-10-2026' : '13-10-2026')}
+                  value={reportMeta.currentDate || (selectedTopicId === 'lakhpati_didi_chakia' ? '24-10-2026' : isLakhpatiTopic ? '21-10-2026' : '13-10-2026')}
                   onChange={(e) => setReportMeta({ ...reportMeta, currentDate: e.target.value, dateLabel: `Date:-${e.target.value}` })}
                   className="w-full bg-white border border-slate-300 rounded px-1.5 py-1 text-[11px] font-bold text-slate-800 focus:outline-hidden"
                 />
@@ -367,7 +368,7 @@ export default function FastReportGenerator({
       )}
 
       {/* Target Preset Selector for Lakhpati Didi Report */}
-      {selectedTopicId === 'lakhpati_didi' && savedBlockTargets && Object.keys(savedBlockTargets).length > 0 && (
+      {isLakhpatiTopic && savedBlockTargets && Object.keys(savedBlockTargets).length > 0 && (
         <div className="bg-gradient-to-r from-amber-50/90 to-emerald-50/90 border-2 border-amber-300/80 rounded-xl p-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xs">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-amber-600 text-white flex items-center justify-center shrink-0 shadow-xs">
