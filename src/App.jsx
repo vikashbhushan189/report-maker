@@ -32,7 +32,7 @@ export default function App() {
     todayDate: '13-10-2026',
     yesterdayDate: '12-10-2026',
     dayBeforeYesterdayDate: '10-10-2026',
-    dateLabel: 'Date:-12-10-2026',
+    dateLabel: 'Date:-13-10-2026',
     currentDate: '13-10-2026',
     prevDate: '12-10-2026',
     theme: 'ekyc_olive',
@@ -116,7 +116,7 @@ export default function App() {
       dayBeforeYesterdayDate: prevYDate,
       currentDate: tDate,
       prevDate: yDate,
-      dateLabel: `Date:-${yDate}`
+      dateLabel: `Date:-${tDate}`
     }));
 
     if (selectedTopicId === 'ekyc_progress') {
@@ -149,7 +149,7 @@ export default function App() {
       ? (topic.dateLabel || 'Date:-13-10-2026')
       : isT01
       ? (topic.dateLabel || 'Date:-10-10-2026')
-      : `Date:-${reportMeta.yesterdayDate || topic.yesterdayDate || '12-10-2026'}`;
+      : `Date:-${reportMeta.todayDate || topic.todayDate || '13-10-2026'}`;
 
     setReportMeta(prev => ({
       ...prev,
@@ -531,9 +531,13 @@ export default function App() {
       }
 
       if (selectedTopicId === 'ekyc_progress') {
-        const yDate = reportMeta.yesterdayDate || '12-10-2026';
-        const prevYDate = reportMeta.dayBeforeYesterdayDate || '10-10-2026';
-        setColumns(generateEkycColumns(yDate, prevYDate));
+        if (parsed.metadata?.detectedDate) {
+          handleEkycDateChange({ today: parsed.metadata.detectedDate });
+        } else {
+          const yDate = reportMeta.yesterdayDate || '12-10-2026';
+          const prevYDate = reportMeta.dayBeforeYesterdayDate || '10-10-2026';
+          setColumns(generateEkycColumns(yDate, prevYDate));
+        }
       } else {
         const currentTopic = REPORT_TOPICS.find(t => t.id === selectedTopicId) || REPORT_TOPICS[0];
         setColumns(currentTopic.columns || []);

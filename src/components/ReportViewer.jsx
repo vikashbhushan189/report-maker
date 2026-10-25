@@ -427,7 +427,7 @@ export default function ReportViewer({
                 <span>{reportMeta.subtitle || 'S01 - Member KYC Details Panchayat: All Panchayats'}</span>
               </div>
               <div className="md:col-span-3 py-2 px-4 text-center flex items-center justify-center">
-                <span>{reportMeta.dateLabel || `Date:-${reportMeta.yesterdayDate || '12-10-2026'}`}</span>
+                <span>{reportMeta.dateLabel || `Date:-${reportMeta.todayDate || reportMeta.currentDate || '13-10-2026'}`}</span>
               </div>
             </div>
           </div>

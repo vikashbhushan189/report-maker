@@ -375,7 +375,7 @@ export async function exportToStyledExcel({
 
     const blockText = reportMeta.companyName || 'Block: KOTWA';
     const centerText = reportMeta.subtitle || 'S01 - Member KYC Details Panchayat: All Panchayats';
-    const dateText = reportMeta.dateLabel || `Date:-${reportMeta.yesterdayDate || reportMeta.currentDate || '12-10-2026'}`;
+    const dateText = reportMeta.dateLabel || `Date:-${reportMeta.todayDate || reportMeta.currentDate || '13-10-2026'}`;
 
     const colSplit1 = 4;
     const colSplit2 = Math.min(13, totalColsCount - 4);
